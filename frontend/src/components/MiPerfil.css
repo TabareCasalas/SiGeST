@@ -71,6 +71,14 @@
   border-radius: 4px;
   font-size: 14px;
   transition: border-color 0.3s;
+  box-sizing: border-box;
+}
+
+/* Los inputs dentro de field-input-wrapper tienen padding-left especial para los iconos */
+.field-input-wrapper input[type="text"],
+.field-input-wrapper input[type="email"],
+.field-input-wrapper input[type="tel"] {
+  padding-left: 38px !important;
 }
 
 .form-group input[type="text"]:focus,
@@ -107,18 +115,32 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .field-icon {
   position: absolute;
   left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #7f8c8d;
   font-size: 14px;
-  z-index: 1;
+  z-index: 2;
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .field-input-wrapper input {
-  padding-left: 35px;
+  width: 100%;
+  padding-left: 38px;
+  padding-right: 12px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  box-sizing: border-box;
 }
 
 .btn-remove-field {
