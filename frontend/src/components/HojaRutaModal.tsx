@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { HojaRuta } from '../types/tramite';
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaUser, FaFileAlt, FaPrint } from 'react-icons/fa';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { formatDate, formatDateTime } from '../utils/dateFormatter';
 import './HojaRutaModal.css';
 
@@ -33,6 +34,9 @@ export function HojaRutaModal({ idTramite, isOpen, onClose, onUpdate, tramiteInf
     fecha_actuacion: new Date().toISOString().split('T')[0],
     descripcion: '',
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [actuacionEliminar, setActuacionEliminar] = useState<number | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -95,16 +99,26 @@ export function HojaRutaModal({ idTramite, isOpen, onClose, onUpdate, tramiteInf
     setShowForm(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Estás seguro de eliminar esta actuación?')) return;
+  const handleDeleteClick = (id: number) => {
+    setActuacionEliminar(id);
+    setShowDeleteModal(true);
+  };
 
+  const handleDelete = async () => {
+    if (!actuacionEliminar) return;
+
+    setDeleteLoading(true);
     try {
-      await ApiService.deleteActuacion(id);
+      await ApiService.deleteActuacion(actuacionEliminar);
       showToast('Actuación eliminada exitosamente', 'success');
       await loadActuaciones();
       if (onUpdate) onUpdate();
+      setShowDeleteModal(false);
+      setActuacionEliminar(null);
     } catch (err: any) {
       showToast(`Error: ${err.message}`, 'error');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -378,7 +392,7 @@ export function HojaRutaModal({ idTramite, isOpen, onClose, onUpdate, tramiteInf
                         </button>
                         <button
                           className="btn-delete"
-                          onClick={() => handleDelete(actuacion.id_hoja_ruta)}
+                          onClick={() => handleDeleteClick(actuacion.id_hoja_ruta)}
                           title="Eliminar actuación"
                         >
                           <FaTrash />
@@ -401,6 +415,20 @@ export function HojaRutaModal({ idTramite, isOpen, onClose, onUpdate, tramiteInf
           )}
         </div>
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setActuacionEliminar(null);
+        }}
+        onConfirm={handleDelete}
+        title="Eliminar Actuación"
+        message="¿Estás seguro de eliminar esta actuación?"
+        warningText="Esta acción no se puede deshacer. La actuación será eliminada permanentemente."
+        loading={deleteLoading}
+      />
     </div>
   );
 }

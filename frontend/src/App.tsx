@@ -7,9 +7,9 @@ import { FichasList } from './components/FichasList';
 import { EstudianteGrupoInfo } from './components/EstudianteGrupoInfo';
 import { EstudianteFichasList } from './components/EstudianteFichasList';
 import { NotificacionesPanel } from './components/NotificacionesPanel';
-import { NotificacionesBadge } from './components/NotificacionesBadge';
 import { AuditoriasList } from './components/AuditoriasList';
 import { ReportesPanel } from './components/ReportesPanel';
+import { MiPerfil } from './components/MiPerfil';
 import { Login } from './components/Login';
 import { NotificationBanner } from './components/NotificationBanner';
 import { ToastContainer } from './components/ToastContainer';
@@ -17,7 +17,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { FaSignOutAlt, FaUser, FaBell } from 'react-icons/fa';
 
-type View = 'tramites' | 'usuarios' | 'grupos' | 'fichas' | 'mis_tramites' | 'consultar_tramite' | 'mi_grupo' | 'notificaciones' | 'auditorias' | 'reportes';
+type View = 'tramites' | 'usuarios' | 'grupos' | 'fichas' | 'mis_tramites' | 'consultar_tramite' | 'mi_grupo' | 'notificaciones' | 'auditorias' | 'reportes' | 'mi_perfil';
 
 interface MenuItem {
   id: string;
@@ -242,7 +242,18 @@ function AppContent() {
               {currentView === 'notificaciones' && '🔔 Notificaciones'}
               {currentView === 'auditorias' && '📋 Auditorías del Sistema'}
               {currentView === 'reportes' && '📊 Reportes del Sistema'}
+              {currentView === 'mi_perfil' && '👤 Mi Perfil'}
             </h1>
+          </div>
+          <div className="header-actions">
+            <button
+              onClick={() => setCurrentView('mi_perfil')}
+              className="btn-profile"
+              title="Mi Perfil"
+            >
+              <FaUser />
+              <span>Mi Perfil</span>
+            </button>
           </div>
         </header>
 
@@ -283,20 +294,12 @@ function AppContent() {
           {currentView === 'reportes' && hasRole('admin') && (
             <ReportesPanel key={refreshKey} />
           )}
+          {currentView === 'mi_perfil' && (
+            <MiPerfil />
+          )}
         </div>
 
         <footer className="main-footer">
-          <div className="footer-links">
-            <a href="http://localhost:3001" target="_blank" rel="noopener noreferrer">
-              📡 Backend API
-            </a>
-            <a href="http://localhost:8080" target="_blank" rel="noopener noreferrer">
-              🗄️ PgAdmin
-            </a>
-          </div>
-          <p className="footer-copyright">
-            © 2024 Clínica Notarial - Sistema de Gestión de Trámites
-          </p>
         </footer>
       </main>
     </div>

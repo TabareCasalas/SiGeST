@@ -29,13 +29,23 @@ const PORT = process.env.PORT || 3001;
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? (process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true) // En producción, usar variable de entorno o permitir todos
-    : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'], // En desarrollo, solo localhost
+    : (origin, callback) => {
+        // En desarrollo, permitir cualquier puerto de localhost
+        if (!origin || origin.match(/^http:\/\/(localhost|127\.0\.0\.1):\d+$/)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
+
+// Manejar preflight requests explícitamente
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

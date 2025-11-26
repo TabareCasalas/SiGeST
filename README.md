@@ -1,4 +1,4 @@
-# SGST - Sistema de Gestión de Trámites
+# SiGeST - Sistema de Gestión de Trámites
 
 Sistema de gestión de trámites para la Clínica Notarial. Arquitectura clásica con Frontend (React + Vite), Backend (Node.js + Express + Prisma) y Base de Datos (PostgreSQL).
 
@@ -73,13 +73,13 @@ npx prisma migrate dev
 ### Acceder a la base de datos
 
 ```bash
-docker-compose exec postgres psql -U sgst_user -d sgst_db
+docker-compose exec postgres psql -U sigest_user -d sigest_db
 ```
 
 ## 📁 Estructura del Proyecto
 
 ```
-SGST5/
+SiGeST/
 ├── backend/              # Backend API
 │   ├── src/
 │   │   ├── controllers/  # Controladores
@@ -136,7 +136,7 @@ cp .env.example .env  # Si existe, o créalo manualmente
 Contenido del archivo `backend/.env`:
 ```env
 NODE_ENV=development
-DATABASE_URL=postgresql://sgst_user:sgst_password@localhost:5432/sgst_db
+DATABASE_URL=postgresql://sigest_user:sigest_password@localhost:5432/sigest_db
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 REFRESH_SECRET=your-refresh-secret-change-this-in-production
 PORT=3001
@@ -144,14 +144,14 @@ PORT=3001
 # Configuración de Resend para envío de correos
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 RESEND_FROM_EMAIL=noreply@tudominio.com
-RESEND_FROM_NAME=SGST Sistema
+RESEND_FROM_NAME=SiGeST Sistema
 ```
 
 **Nota sobre Resend:**
 - Obtén tu API key en: https://resend.com/api-keys
 - Para desarrollo, puedes dejar `RESEND_API_KEY` vacío y las credenciales se mostrarán en la consola
 - `RESEND_FROM_EMAIL` debe ser un dominio verificado en Resend (o usar `onboarding@resend.dev` para pruebas sin dominio)
-- `RESEND_FROM_NAME` es opcional, por defecto será "SGST Sistema"
+- `RESEND_FROM_NAME` es opcional, por defecto será "SiGeST Sistema"
 - **Sin dominio personalizado**: Puedes usar `onboarding@resend.dev` que es el dominio de prueba de Resend (no requiere verificación)
 
 #### Frontend
@@ -208,7 +208,7 @@ docker-compose logs -f postgres
 docker-compose down
 
 # Acceder a la base de datos directamente
-docker-compose exec postgres psql -U sgst_user -d sgst_db
+docker-compose exec postgres psql -U sigest_user -d sigest_db
 
 # Abrir Prisma Studio (interfaz visual para la BD)
 cd backend
@@ -228,7 +228,7 @@ npx prisma studio
 Verifica que:
 - El servicio de PostgreSQL esté corriendo: `docker-compose ps`
 - Las credenciales en `backend/.env` coincidan con las del servicio postgres
-- La URL de la base de datos sea: `postgresql://sgst_user:sgst_password@localhost:5432/sgst_db`
+- La URL de la base de datos sea: `postgresql://sigest_user:sigest_password@localhost:5432/sigest_db`
 - El puerto 5432 no esté siendo usado por otra aplicación
 
 ### El frontend no puede conectarse al backend

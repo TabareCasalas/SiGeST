@@ -12,6 +12,7 @@ import {
 import { HojaRutaModal } from './HojaRutaModal';
 import { DocumentosModal } from './DocumentosModal';
 import { CambiarEstadoTramiteModal } from './CambiarEstadoTramiteModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { SearchInput } from './SearchInput';
 import { formatDate, formatDateTime } from '../utils/dateFormatter';
 import './TramitesList.css';
@@ -36,6 +37,9 @@ export function TramitesList() {
   const [tramiteDocumentos, setTramiteDocumentos] = useState<number | null>(null);
   const [showCambiarEstadoModal, setShowCambiarEstadoModal] = useState(false);
   const [tramiteCambiarEstado, setTramiteCambiarEstado] = useState<Tramite | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [tramiteEliminar, setTramiteEliminar] = useState<Tramite | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const { showToast } = useToast();
   const { user, hasRole, hasAccessLevel } = useAuth();
 
@@ -204,15 +208,25 @@ export function TramitesList() {
     setExpandedRows(newExpanded);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Estás seguro de eliminar este trámite?')) return;
+  const handleDeleteClick = (tramite: Tramite) => {
+    setTramiteEliminar(tramite);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!tramiteEliminar) return;
     
+    setDeleteLoading(true);
     try {
-      await ApiService.deleteTramite(id);
+      await ApiService.deleteTramite(tramiteEliminar.id_tramite);
       await loadTramites();
       showToast('Trámite eliminado exitosamente', 'success');
+      setShowDeleteModal(false);
+      setTramiteEliminar(null);
     } catch (err: any) {
       showToast(`Error al eliminar: ${err.message}`, 'error');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -452,7 +466,7 @@ export function TramitesList() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(tramite.id_tramite);
+                              handleDeleteClick(tramite);
                             }}
                             className="btn-icon btn-danger"
                             title="Eliminar trámite"
@@ -744,6 +758,21 @@ export function TramitesList() {
           }}
         />
       )}
+
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setTramiteEliminar(null);
+        }}
+        onConfirm={handleDelete}
+        title="Eliminar Trámite"
+        message="¿Estás seguro de eliminar este trámite?"
+        itemName={tramiteEliminar ? `Trámite #${tramiteEliminar.id_tramite}` : undefined}
+        warningText="Esta acción no se puede deshacer. El trámite será eliminado permanentemente."
+        loading={deleteLoading}
+      />
     </div>
   );
 }

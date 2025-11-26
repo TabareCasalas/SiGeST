@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ApiService } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -306,8 +306,8 @@ export function UsuariosList() {
                 usuarios.map((usuario) => {
                 const usuarioDetallado = usuariosDetallados.get(usuario.id_usuario) || usuario;
                 return (
-                  <>
-                    <tr key={usuario.id_usuario} className="usuario-row">
+                  <React.Fragment key={usuario.id_usuario}>
+                    <tr className="usuario-row">
                       <td>{usuario.id_usuario}</td>
                       <td>
                         <div className="user-info">
@@ -458,7 +458,7 @@ export function UsuariosList() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
                 })
               )}

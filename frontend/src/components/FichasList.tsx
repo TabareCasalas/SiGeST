@@ -11,6 +11,7 @@ import {
 import { EditFichaModal } from './EditFichaModal';
 import { AprobarFichaModal } from './AprobarFichaModal';
 import { CreateFichaModal } from './CreateFichaModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { formatDateTime } from '../utils/dateFormatter';
 import './FichasList.css';
 
@@ -98,6 +99,9 @@ export function FichasList() {
   const [fichaEditar, setFichaEditar] = useState<Ficha | null>(null);
   const [showAprobarModal, setShowAprobarModal] = useState(false);
   const [fichaAprobar, setFichaAprobar] = useState<Ficha | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [fichaEliminar, setFichaEliminar] = useState<Ficha | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>('');
   const [grupoSeleccionadoInfo, setGrupoSeleccionadoInfo] = useState<Grupo | null>(null);
@@ -253,15 +257,25 @@ export function FichasList() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Estás seguro de eliminar esta ficha? Solo se pueden eliminar fichas en estado "standby".')) return;
+  const handleDeleteClick = (ficha: Ficha) => {
+    setFichaEliminar(ficha);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!fichaEliminar) return;
     
+    setDeleteLoading(true);
     try {
-      await ApiService.deleteFicha(id);
+      await ApiService.deleteFicha(fichaEliminar.id_ficha);
       await loadFichas();
       showToast('Ficha eliminada exitosamente', 'success');
+      setShowDeleteModal(false);
+      setFichaEliminar(null);
     } catch (err: any) {
       showToast(`Error al eliminar: ${err.message}`, 'error');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -502,7 +516,7 @@ export function FichasList() {
                         )}
                         {ficha.estado === 'standby' && hasRole('admin') && hasAccessLevel(1) && (
                           <button
-                            onClick={() => handleDelete(ficha.id_ficha)}
+                            onClick={() => handleDeleteClick(ficha)}
                             className="btn-icon btn-danger"
                             title="Eliminar"
                           >
@@ -705,6 +719,21 @@ export function FichasList() {
           setFichaAprobar(null);
         }}
         onSuccess={loadFichas}
+      />
+
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setFichaEliminar(null);
+        }}
+        onConfirm={handleDelete}
+        title="Eliminar Ficha"
+        message="¿Estás seguro de eliminar esta ficha? Solo se pueden eliminar fichas en estado 'standby'."
+        itemName={fichaEliminar ? `Ficha #${fichaEliminar.numero_consulta} - ${fichaEliminar.tema_consulta}` : undefined}
+        warningText="Esta acción no se puede deshacer. La ficha será eliminada permanentemente."
+        loading={deleteLoading}
       />
     </div>
   );

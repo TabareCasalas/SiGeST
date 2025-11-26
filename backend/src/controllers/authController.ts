@@ -287,4 +287,89 @@ export const authController = {
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   },
+
+  /**
+   * Actualizar perfil propio: Permite al usuario actualizar sus propios datos
+   * (sin permisos de admin, solo datos personales)
+   */
+  async updateProfile(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'No autenticado' });
+      }
+
+      const { nombre, domicilio, telefono, correo, correos_adicionales } = req.body;
+
+      // Obtener usuario actual
+      const currentUser = await prisma.usuario.findUnique({
+        where: { id_usuario: userId },
+      });
+
+      if (!currentUser) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Solo permitir actualizar campos personales (no rol, nivel_acceso, ci, etc.)
+      const updateData: any = {};
+      if (nombre !== undefined) updateData.nombre = nombre;
+      if (domicilio !== undefined) updateData.domicilio = domicilio;
+      if (telefono !== undefined) updateData.telefono = telefono;
+      if (correo !== undefined) updateData.correo = correo;
+      if (correos_adicionales !== undefined) {
+        updateData.correos_adicionales = correos_adicionales || null;
+      }
+
+      // Validar que el correo no esté duplicado (si se está cambiando)
+      if (correo && correo !== currentUser.correo) {
+        const correoExistente = await prisma.usuario.findUnique({
+          where: { correo },
+        });
+        if (correoExistente) {
+          return res.status(409).json({ error: 'Ya existe un usuario con ese correo electrónico' });
+        }
+      }
+
+      // Actualizar usuario
+      const usuario = await prisma.usuario.update({
+        where: { id_usuario: userId },
+        data: updateData,
+        include: {
+          grupos_participa: {
+            include: {
+              grupo: true,
+            },
+          },
+        },
+      });
+
+      // Registrar auditoría
+      const changes: string[] = [];
+      if (nombre && nombre !== currentUser.nombre) changes.push(`nombre: ${currentUser.nombre} → ${nombre}`);
+      if (domicilio && domicilio !== currentUser.domicilio) changes.push(`domicilio actualizado`);
+      if (telefono && telefono !== currentUser.telefono) changes.push(`teléfono actualizado`);
+      if (correo && correo !== currentUser.correo) changes.push(`correo: ${currentUser.correo} → ${correo}`);
+
+      if (changes.length > 0) {
+        await AuditoriaService.crearDesdeRequest(req, {
+          id_usuario: userId,
+          tipo_entidad: 'usuario',
+          id_entidad: usuario.id_usuario,
+          accion: 'modificar_perfil',
+          detalles: `Usuario actualizó su perfil. Cambios: ${changes.join(', ')}`,
+        });
+      }
+
+      // Responder sin password
+      const { password: _, ...usuarioSinPassword } = usuario;
+      
+      res.json(usuarioSinPassword);
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        return res.status(409).json({ error: 'Ya existe un usuario con ese correo electrónico' });
+      }
+      console.error('Error al actualizar perfil:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  },
 };

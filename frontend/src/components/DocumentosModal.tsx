@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { DocumentoAdjunto } from '../types/tramite';
 import { FaPlus, FaTrash, FaDownload, FaFileAlt, FaUpload } from 'react-icons/fa';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { formatDate } from '../utils/dateFormatter';
 import './DocumentosModal.css';
 
@@ -27,6 +28,9 @@ export function DocumentosModal({ idTramite, isOpen, onClose, onUpdate }: Props)
     archivo: null as File | null,
     descripcion: '',
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [documentoEliminar, setDocumentoEliminar] = useState<{ id: number; nombre: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -111,16 +115,26 @@ export function DocumentosModal({ idTramite, isOpen, onClose, onUpdate }: Props)
     }
   };
 
-  const handleDelete = async (id: number, nombreArchivo: string) => {
-    if (!confirm(`¿Estás seguro de eliminar el documento "${nombreArchivo}"?`)) return;
+  const handleDeleteClick = (id: number, nombreArchivo: string) => {
+    setDocumentoEliminar({ id, nombre: nombreArchivo });
+    setShowDeleteModal(true);
+  };
 
+  const handleDelete = async () => {
+    if (!documentoEliminar) return;
+
+    setDeleteLoading(true);
     try {
-      await ApiService.deleteDocumento(id);
+      await ApiService.deleteDocumento(documentoEliminar.id);
       showToast('Documento eliminado exitosamente', 'success');
       await loadDocumentos();
       if (onUpdate) onUpdate();
+      setShowDeleteModal(false);
+      setDocumentoEliminar(null);
     } catch (err: any) {
       showToast(`Error: ${err.message}`, 'error');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -271,7 +285,7 @@ export function DocumentosModal({ idTramite, isOpen, onClose, onUpdate }: Props)
                       {canDelete(documento) && (
                         <button
                           className="btn-delete"
-                          onClick={() => handleDelete(documento.id_documento, documento.nombre_archivo)}
+                          onClick={() => handleDeleteClick(documento.id_documento, documento.nombre_archivo)}
                           title="Eliminar documento"
                         >
                           <FaTrash />
@@ -285,6 +299,20 @@ export function DocumentosModal({ idTramite, isOpen, onClose, onUpdate }: Props)
           )}
         </div>
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDocumentoEliminar(null);
+        }}
+        onConfirm={handleDelete}
+        title="Eliminar Documento"
+        message={`¿Estás seguro de eliminar el documento "${documentoEliminar?.nombre}"?`}
+        warningText="Esta acción no se puede deshacer. El documento será eliminado permanentemente."
+        loading={deleteLoading}
+      />
     </div>
   );
 }

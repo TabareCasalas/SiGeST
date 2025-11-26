@@ -95,6 +95,21 @@ export class ApiService {
     return response.json();
   }
 
+  static async updateProfile(data: { nombre?: string; domicilio?: string; telefono?: string; correo?: string; correos_adicionales?: string }) {
+    const response = await fetch(`${API_URL}/auth/perfil`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error al actualizar perfil');
+    }
+    
+    return response.json();
+  }
+
   // ============== SOLICITUDES DE REACTIVACIÓN ==============
 
   static async solicitarReactivacion(ci: string, password: string, motivo?: string) {

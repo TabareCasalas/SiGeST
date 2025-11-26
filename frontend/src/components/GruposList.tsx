@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiService } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,7 @@ import {
   FaSearch, FaTimes, FaPlus
 } from 'react-icons/fa';
 import { CreateGrupoModal } from './CreateGrupoModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { SearchInput } from './SearchInput';
 import './GruposList.css';
 
@@ -59,6 +60,13 @@ export function GruposList() {
     asistentes_ids: [] as string[],
     estudiantes_ids: [] as string[],
   });
+  const [showDeleteMemberModal, setShowDeleteMemberModal] = useState(false);
+  const [miembroEliminar, setMiembroEliminar] = useState<{ id_usuario_grupo: number; nombre: string } | null>(null);
+  const [showDeleteGrupoModal, setShowDeleteGrupoModal] = useState(false);
+  const [grupoEliminar, setGrupoEliminar] = useState<Grupo | null>(null);
+  const [showToggleActivoModal, setShowToggleActivoModal] = useState(false);
+  const [grupoToggleActivo, setGrupoToggleActivo] = useState<Grupo | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const { showToast } = useToast();
   const { user, hasRole, hasAccessLevel } = useAuth();
 
@@ -372,22 +380,29 @@ export function GruposList() {
     }
   };
 
-  const handleRemoveMember = async (id_usuario_grupo: number) => {
+  const handleRemoveMemberClick = (id_usuario_grupo: number, nombre: string) => {
     if (!selectedGrupo) return;
+    setMiembroEliminar({ id_usuario_grupo, nombre });
+    setShowDeleteMemberModal(true);
+  };
 
-    if (!window.confirm('¿Está seguro de que desea eliminar a este miembro del grupo?')) {
-      return;
-    }
+  const handleRemoveMember = async () => {
+    if (!selectedGrupo || !miembroEliminar) return;
 
+    setDeleteLoading(true);
     try {
-      await ApiService.removeMiembroGrupo(selectedGrupo.id_grupo, id_usuario_grupo);
+      await ApiService.removeMiembroGrupo(selectedGrupo.id_grupo, miembroEliminar.id_usuario_grupo);
       showToast('Miembro eliminado exitosamente', 'success');
       // Recargar el grupo seleccionado
       const grupoActualizado = await ApiService.getGrupoById(selectedGrupo.id_grupo);
       setSelectedGrupo(grupoActualizado);
       loadGrupos();
+      setShowDeleteMemberModal(false);
+      setMiembroEliminar(null);
     } catch (err: any) {
       showToast(`Error: ${err.message}`, 'error');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -400,18 +415,20 @@ export function GruposList() {
     return true;
   };
 
-  const handleToggleActivo = async (grupo: Grupo) => {
-    const accion = grupo.activo ? 'desactivar' : 'activar';
-    if (!window.confirm(`¿Está seguro de que desea ${accion} el grupo "${grupo.nombre}"?`)) {
-      return;
-    }
+  const handleToggleActivoClick = (grupo: Grupo) => {
+    setGrupoToggleActivo(grupo);
+    setShowToggleActivoModal(true);
+  };
+
+  const handleToggleActivo = async () => {
+    if (!grupoToggleActivo) return;
 
     try {
-      if (grupo.activo) {
-        await ApiService.deactivateGrupo(grupo.id_grupo);
+      if (grupoToggleActivo.activo) {
+        await ApiService.deactivateGrupo(grupoToggleActivo.id_grupo);
         showToast('Grupo desactivado exitosamente', 'success');
       } else {
-        await ApiService.activateGrupo(grupo.id_grupo);
+        await ApiService.activateGrupo(grupoToggleActivo.id_grupo);
         showToast('Grupo activado exitosamente', 'success');
       }
       
@@ -576,9 +593,8 @@ export function GruposList() {
                 const totalTramites = grupo.tramites?.length || 0;
 
                 return (
-                  <>
+                  <React.Fragment key={grupo.id_grupo}>
                     <tr 
-                      key={grupo.id_grupo} 
                       className={`table-row ${!grupo.activo ? 'inactive-row' : ''}`}
                       onClick={() => toggleRow(grupo.id_grupo)}
                     >
@@ -642,18 +658,9 @@ export function GruposList() {
                           )}
                           {hasRole('admin') && hasAccessLevel(1) && (
                             <button
-                              onClick={async () => {
-                                if (!window.confirm(`¿Está seguro de que desea eliminar el grupo "${grupo.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
-                                  return;
-                                }
-                                
-                                try {
-                                  await ApiService.deleteGrupo(grupo.id_grupo);
-                                  showToast('Grupo eliminado exitosamente', 'success');
-                                  await loadGrupos();
-                                } catch (err: any) {
-                                  showToast(`Error al eliminar grupo: ${err.message}`, 'error');
-                                }
+                              onClick={() => {
+                                setGrupoEliminar(grupo);
+                                setShowDeleteGrupoModal(true);
                               }}
                               className="btn-icon btn-danger"
                               title="Eliminar Grupo"
@@ -726,7 +733,7 @@ export function GruposList() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
@@ -766,7 +773,7 @@ export function GruposList() {
                       {hasRole('admin') && (
                         <button 
                           className={`btn-toggle-activo ${selectedGrupo.activo ? 'deactivate' : 'activate'}`}
-                          onClick={() => handleToggleActivo(selectedGrupo)}
+                          onClick={() => handleToggleActivoClick(selectedGrupo)}
                           title={selectedGrupo.activo ? 'Desactivar grupo' : 'Activar grupo'}
                         >
                           {selectedGrupo.activo ? '⏸ Desactivar' : '▶ Activar'}
@@ -795,7 +802,7 @@ export function GruposList() {
                           {canRemoveMember(m) && (hasRole('admin') || hasRole('docente')) && (
                             <button
                               className="btn-remove-member"
-                              onClick={() => handleRemoveMember(m.id_usuario_grupo)}
+                              onClick={() => handleRemoveMemberClick(m.id_usuario_grupo, m.usuario.nombre)}
                               title="Eliminar miembro"
                             >
                               ✕
@@ -822,7 +829,7 @@ export function GruposList() {
                             {(hasRole('admin') || hasRole('docente')) && (
                               <button
                                 className="btn-remove-member"
-                                onClick={() => handleRemoveMember(m.id_usuario_grupo)}
+                                onClick={() => handleRemoveMemberClick(m.id_usuario_grupo, m.usuario.nombre)}
                                 title="Eliminar miembro"
                               >
                                 ✕
@@ -849,7 +856,7 @@ export function GruposList() {
                             {(hasRole('admin') || hasRole('docente')) && (
                               <button
                                 className="btn-remove-member"
-                                onClick={() => handleRemoveMember(m.id_usuario_grupo)}
+                                onClick={() => handleRemoveMemberClick(m.id_usuario_grupo, m.usuario.nombre)}
                                 title="Eliminar miembro"
                               >
                                 ✕
@@ -982,6 +989,64 @@ export function GruposList() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmación para eliminar miembro */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteMemberModal}
+        onClose={() => {
+          setShowDeleteMemberModal(false);
+          setMiembroEliminar(null);
+        }}
+        onConfirm={handleRemoveMember}
+        title="Eliminar Miembro del Grupo"
+        message="¿Está seguro de que desea eliminar a este miembro del grupo?"
+        itemName={miembroEliminar?.nombre}
+        warningText="Esta acción no se puede deshacer. El miembro será eliminado del grupo."
+        loading={deleteLoading}
+      />
+
+      {/* Modal de confirmación para eliminar grupo */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteGrupoModal}
+        onClose={() => {
+          setShowDeleteGrupoModal(false);
+          setGrupoEliminar(null);
+        }}
+        onConfirm={async () => {
+          if (!grupoEliminar) return;
+          
+          setDeleteLoading(true);
+          try {
+            await ApiService.deleteGrupo(grupoEliminar.id_grupo);
+            showToast('Grupo eliminado exitosamente', 'success');
+            await loadGrupos();
+            setShowDeleteGrupoModal(false);
+            setGrupoEliminar(null);
+          } catch (err: any) {
+            showToast(`Error al eliminar grupo: ${err.message}`, 'error');
+          } finally {
+            setDeleteLoading(false);
+          }
+        }}
+        title="Eliminar Grupo"
+        message={`¿Está seguro de que desea eliminar el grupo "${grupoEliminar?.nombre}"?`}
+        warningText="Esta acción no se puede deshacer. El grupo será eliminado permanentemente."
+        loading={deleteLoading}
+      />
+
+      {/* Modal de confirmación para activar/desactivar grupo */}
+      <ConfirmDeleteModal
+        isOpen={showToggleActivoModal}
+        onClose={() => {
+          setShowToggleActivoModal(false);
+          setGrupoToggleActivo(null);
+        }}
+        onConfirm={handleToggleActivo}
+        title={grupoToggleActivo?.activo ? "Desactivar Grupo" : "Activar Grupo"}
+        message={`¿Está seguro de que desea ${grupoToggleActivo?.activo ? 'desactivar' : 'activar'} el grupo "${grupoToggleActivo?.nombre}"?`}
+        itemName={grupoToggleActivo?.nombre}
+        loading={false}
+      />
     </div>
   );
 }
