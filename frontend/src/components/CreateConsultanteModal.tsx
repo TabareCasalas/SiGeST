@@ -328,7 +328,7 @@ export function CreateConsultanteModal({ isOpen, onClose, onSuccess }: Props) {
             <select
               id="est_civil"
               value={formData.est_civil}
-              onChange={(e) => setFormData({ ...formData, est_civil: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, est_civil: e.target.value as 'Soltero' | 'Casado' | 'Divorciado' | 'Viudo' | 'Unión Libre' })}
               required
               disabled={loading}
             >

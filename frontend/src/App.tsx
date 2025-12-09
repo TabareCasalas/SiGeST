@@ -7,7 +7,6 @@ import { FichasList } from './components/FichasList';
 import { EstudianteGrupoInfo } from './components/EstudianteGrupoInfo';
 import { EstudianteFichasList } from './components/EstudianteFichasList';
 import { NotificacionesPanel } from './components/NotificacionesPanel';
-import { NotificacionesBadge } from './components/NotificacionesBadge';
 import { AuditoriasList } from './components/AuditoriasList';
 import { ReportesPanel } from './components/ReportesPanel';
 import { Login } from './components/Login';

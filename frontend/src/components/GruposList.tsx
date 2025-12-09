@@ -927,7 +927,7 @@ export function GruposList() {
                       {(hasRole('admin') || hasRole('docente')) && (
                         <button 
                           className="btn-add-member"
-                          onClick={handleOpenModifyMembers}
+                          onClick={() => handleOpenModifyMembers(selectedGrupo)}
                         >
                           ✏️ Modificar Miembros
                         </button>

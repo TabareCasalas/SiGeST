@@ -11,6 +11,8 @@ export interface AuthUser {
   nombre: string;
   ci: string;
   correo: string;
+  telefono?: string;
+  domicilio?: string;
   rol: UserRole;
   rol_activo?: string; // Rol que el usuario está usando actualmente
   roles_disponibles?: string[]; // Todos los roles que el usuario puede usar
