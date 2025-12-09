@@ -12,6 +12,7 @@
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
     "seed:production": "ts-node scripts/seed-production.ts",
+    "seed:completo": "ts-node scripts/seed-completo-production.ts",
     "db:reset": "prisma migrate reset --force && npm run seed",
     "db:clean": "ts-node scripts/clean-database.ts"
   },

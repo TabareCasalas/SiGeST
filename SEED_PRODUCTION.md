@@ -1,31 +1,53 @@
-# Script de Seed para Producción
+# Scripts de Seed para Producción
 
-Este script permite poblar la base de datos en producción con datos de prueba.
+Hay dos scripts disponibles para poblar la base de datos en producción:
 
-## 📋 Contenido del Script
+## 🎯 Script Completo (Recomendado)
 
-El script `seed-production.ts` crea:
+El script `seed-completo-production.ts` crea **TODOS** los datos:
 
 - **3 Administradores** (con diferentes niveles de acceso)
 - **7 Docentes** (2 responsables, 5 asistentes)
 - **6 Estudiantes** (asignados a grupos)
 - **3 Consultantes**
 - **2 Grupos** (con sus miembros)
+- **6 Trámites** (3 por grupo, con hojas de ruta)
+- **30-42 Hojas de ruta** (5-7 por trámite, distribuidas entre estudiantes)
+- **6 Fichas** (con diferentes estados: pendiente, asignada, iniciada)
+- **Notificaciones** (para docentes y estudiantes)
 - **Registros de auditoría**
+
+## 📋 Script Básico
+
+El script `seed-production.ts` crea solo:
+- Usuarios, grupos, estudiantes, consultantes y auditorías básicas
+- **NO incluye** trámites, hojas de ruta ni fichas
 
 ## 🚀 Ejecución en Producción
 
-### Opción 1: Desde el contenedor Docker
+### Opción 1: Script Completo (Recomendado)
 
 ```bash
-# Ejecutar el seed dentro del contenedor del backend
+# Ejecutar el seed completo dentro del contenedor del backend
+docker exec sgst_backend_prod npm run seed:completo
+```
+
+### Opción 2: Script Básico
+
+```bash
+# Ejecutar el seed básico dentro del contenedor del backend
 docker exec sgst_backend_prod npm run seed:production
 ```
 
-### Opción 2: Desde la VM (si tienes acceso directo)
+### Opción 3: Desde la VM (si tienes acceso directo)
 
 ```bash
 cd /opt/sigest/backend
+
+# Script completo
+npm run seed:completo
+
+# O script básico
 npm run seed:production
 ```
 
@@ -125,13 +147,22 @@ npm run seed:production
 
 ## ⚠️ Notas Importantes
 
-1. **El script usa `upsert`**: Si los usuarios ya existen (mismo CI), los actualiza en lugar de crear duplicados.
+1. **El script usa `upsert`**: Si los datos ya existen (mismo CI, número de carpeta, etc.), los actualiza en lugar de crear duplicados.
 
 2. **No elimina datos existentes**: A diferencia del seed de desarrollo, este script NO elimina datos existentes.
 
 3. **Contraseñas**: Todas las contraseñas son `password123`. **IMPORTANTE**: Cambia las contraseñas en producción después de crear los usuarios.
 
 4. **Grupos**: Los grupos se crean con IDs fijos (1 y 2). Si ya existen, se actualizan.
+
+5. **Trámites**: Se crean 6 trámites (3 por grupo) con números de carpeta únicos generados aleatoriamente.
+
+6. **Hojas de ruta**: Cada trámite tiene entre 5 y 7 hojas de ruta distribuidas entre los estudiantes del grupo.
+
+7. **Fichas**: Se crean 6 fichas con diferentes estados:
+   - 2 fichas en estado "pendiente" (sin grupo asignado)
+   - 2 fichas en estado "asignada" (con grupo asignado)
+   - 2 fichas en estado "iniciada" (con grupo asignado)
 
 ## 🔄 Ejecutar Scripts Adicionales
 
@@ -159,5 +190,17 @@ docker exec sgst_postgres_prod psql -U sgst_user -d sgst_db -c "SELECT id_grupo,
 
 # Ver consultantes
 docker exec sgst_postgres_prod psql -U sgst_user -d sgst_db -c "SELECT c.id_consultante, u.nombre, u.ci, c.est_civil, c.nro_padron FROM \"Consultante\" c JOIN \"Usuario\" u ON c.id_usuario = u.id_usuario;"
+
+# Ver trámites creados
+docker exec sgst_postgres_prod psql -U sgst_user -d sgst_db -c "SELECT id_tramite, num_carpeta, estado, id_grupo FROM \"Tramite\" ORDER BY id_tramite;"
+
+# Ver hojas de ruta
+docker exec sgst_postgres_prod psql -U sgst_user -d sgst_db -c "SELECT COUNT(*) as total_hojas_ruta FROM \"HojaRuta\";"
+
+# Ver fichas creadas
+docker exec sgst_postgres_prod psql -U sgst_user -d sgst_db -c "SELECT id_ficha, numero_consulta, estado, id_grupo FROM \"Ficha\" ORDER BY id_ficha;"
+
+# Ver notificaciones
+docker exec sgst_postgres_prod psql -U sgst_user -d sgst_db -c "SELECT COUNT(*) as total_notificaciones, COUNT(*) FILTER (WHERE leida = false) as no_leidas FROM \"Notificacion\";"
 ```
 
