@@ -43,8 +43,25 @@ export const usuarioController = {
               grupo: true,
             },
           },
+          roles_secundarios: true,
         },
         orderBy: { created_at: 'desc' },
+      });
+
+      // Agregar roles_disponibles a cada usuario
+      const usuariosConRoles = usuarios.map(usuario => {
+        const rolesDisponibles = [usuario.rol];
+        if (usuario.roles_secundarios) {
+          usuario.roles_secundarios.forEach((ur) => {
+            if (!rolesDisponibles.includes(ur.rol)) {
+              rolesDisponibles.push(ur.rol);
+            }
+          });
+        }
+        return {
+          ...usuario,
+          roles_disponibles: rolesDisponibles,
+        };
       });
 
       // Registrar auditoría
@@ -64,7 +81,7 @@ export const usuarioController = {
         });
       }
 
-      res.json(usuarios);
+      res.json(usuariosConRoles);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

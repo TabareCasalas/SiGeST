@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, memo } from 'react';
+import { useEffect, useState, useCallback, useRef, memo, Fragment } from 'react';
 import type { JSX } from 'react';
 import { ApiService } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
@@ -11,7 +11,6 @@ import {
 import { EditFichaModal } from './EditFichaModal';
 import { AprobarFichaModal } from './AprobarFichaModal';
 import { CreateFichaModal } from './CreateFichaModal';
-import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { formatDateTime } from '../utils/dateFormatter';
 import './FichasList.css';
 
@@ -99,9 +98,6 @@ export function FichasList() {
   const [fichaEditar, setFichaEditar] = useState<Ficha | null>(null);
   const [showAprobarModal, setShowAprobarModal] = useState(false);
   const [fichaAprobar, setFichaAprobar] = useState<Ficha | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [fichaEliminar, setFichaEliminar] = useState<Ficha | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [grupoSeleccionado, setGrupoSeleccionado] = useState<string>('');
   const [grupoSeleccionadoInfo, setGrupoSeleccionadoInfo] = useState<Grupo | null>(null);
@@ -175,6 +171,21 @@ export function FichasList() {
       }
     }
   }, [filterEstado, searchTerm, activeTab, hasRole, hasAccessLevel, user, showToast]);
+
+  // Estabilizar callbacks para evitar que CreateFichaModal se desmonte
+  // Estos callbacks deben definirse DESPUÉS de loadFichas
+  const handleCloseCreateForm = useCallback(() => {
+    setShowCreateForm(false);
+  }, []);
+
+  const handleCreateFormSuccess = useCallback(() => {
+    // Cerrar el modal antes de recargar para evitar conflictos
+    setShowCreateForm(false);
+    // Recargar después de un pequeño delay
+    setTimeout(() => {
+      loadFichas();
+    }, 100);
+  }, [loadFichas]);
 
   useEffect(() => {
     loadFichas();
@@ -257,25 +268,15 @@ export function FichasList() {
     }
   };
 
-  const handleDeleteClick = (ficha: Ficha) => {
-    setFichaEliminar(ficha);
-    setShowDeleteModal(true);
-  };
-
-  const handleDelete = async () => {
-    if (!fichaEliminar) return;
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Estás seguro de eliminar esta ficha? Solo se pueden eliminar fichas en estado "standby".')) return;
     
-    setDeleteLoading(true);
     try {
-      await ApiService.deleteFicha(fichaEliminar.id_ficha);
+      await ApiService.deleteFicha(id);
       await loadFichas();
       showToast('Ficha eliminada exitosamente', 'success');
-      setShowDeleteModal(false);
-      setFichaEliminar(null);
     } catch (err: any) {
       showToast(`Error al eliminar: ${err.message}`, 'error');
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
@@ -421,8 +422,8 @@ export function FichasList() {
       {/* Modal de creación */}
       <CreateFichaModal
         isOpen={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        onSuccess={loadFichas}
+        onClose={handleCloseCreateForm}
+        onSuccess={handleCreateFormSuccess}
       />
 
       {fichas.length === 0 ? (
@@ -446,8 +447,8 @@ export function FichasList() {
             </thead>
             <tbody>
               {fichas.map((ficha) => (
-                <>
-                  <tr key={ficha.id_ficha} className="ficha-row">
+                <Fragment key={ficha.id_ficha}>
+                  <tr className="ficha-row">
                     <td>
                       <strong className="numero-consulta">{ficha.numero_consulta}</strong>
                     </td>
@@ -516,7 +517,7 @@ export function FichasList() {
                         )}
                         {ficha.estado === 'standby' && hasRole('admin') && hasAccessLevel(1) && (
                           <button
-                            onClick={() => handleDeleteClick(ficha)}
+                            onClick={() => handleDelete(ficha.id_ficha)}
                             className="btn-icon btn-danger"
                             title="Eliminar"
                           >
@@ -584,7 +585,7 @@ export function FichasList() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -719,21 +720,6 @@ export function FichasList() {
           setFichaAprobar(null);
         }}
         onSuccess={loadFichas}
-      />
-
-      {/* Modal de confirmación de eliminación */}
-      <ConfirmDeleteModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setFichaEliminar(null);
-        }}
-        onConfirm={handleDelete}
-        title="Eliminar Ficha"
-        message="¿Estás seguro de eliminar esta ficha? Solo se pueden eliminar fichas en estado 'standby'."
-        itemName={fichaEliminar ? `Ficha #${fichaEliminar.numero_consulta} - ${fichaEliminar.tema_consulta}` : undefined}
-        warningText="Esta acción no se puede deshacer. La ficha será eliminada permanentemente."
-        loading={deleteLoading}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 {
-  "name": "sigest-backend",
+  "name": "sgst-backend",
   "version": "1.0.0",
-  "description": "Backend API for SiGeST System",
+  "description": "Backend API for SGST System",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -11,10 +11,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force && npm run seed"
+    "db:reset": "prisma migrate reset --force && npm run seed",
+    "db:clean": "ts-node scripts/clean-database.ts"
   },
   "keywords": [
-    "sigest",
+    "sgst",
     "backend",
     "api"
   ],

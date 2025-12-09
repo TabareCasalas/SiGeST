@@ -739,19 +739,33 @@
   z-index: 1000;
 }
 
-.modal-content {
+/* Usar selector más específico para evitar conflictos con otros modales */
+.edit-grupo-modal {
   background: white;
   border-radius: 1rem;
-  padding: 2rem;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.2);
   max-width: 800px;
   width: 90%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
 
-.modal-header {
+.edit-grupo-modal .modal-content {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.edit-grupo-modal .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -761,12 +775,12 @@
   flex-shrink: 0;
 }
 
-.modal-header h2 {
+.edit-grupo-modal .modal-header h2 {
   margin: 0;
   color: #1a202c;
 }
 
-.close-btn {
+.edit-grupo-modal .close-btn {
   background: none;
   border: none;
   font-size: 2rem;
@@ -779,18 +793,21 @@
   transition: color 0.2s;
 }
 
-.close-btn:hover {
+.edit-grupo-modal .close-btn:hover {
   color: #2d3748;
 }
 
-.modal-body {
+.edit-grupo-modal .modal-body {
   flex: 1;
   overflow-y: auto;
   padding-right: 0.5rem;
   min-height: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
 }
 
-.modal-body .descripcion {
+.edit-grupo-modal .modal-body .descripcion {
   color: #4a5568;
   margin-bottom: 1.5rem;
   padding: 1rem;
@@ -1005,14 +1022,14 @@
 
 .asistentes-list::-webkit-scrollbar,
 .estudiantes-list::-webkit-scrollbar,
-.modal-body::-webkit-scrollbar,
+.edit-grupo-modal .modal-body::-webkit-scrollbar,
 .add-member-form .form-content::-webkit-scrollbar {
   width: 8px;
 }
 
 .asistentes-list::-webkit-scrollbar-track,
 .estudiantes-list::-webkit-scrollbar-track,
-.modal-body::-webkit-scrollbar-track,
+.edit-grupo-modal .modal-body::-webkit-scrollbar-track,
 .add-member-form .form-content::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
@@ -1020,7 +1037,7 @@
 
 .asistentes-list::-webkit-scrollbar-thumb,
 .estudiantes-list::-webkit-scrollbar-thumb,
-.modal-body::-webkit-scrollbar-thumb,
+.edit-grupo-modal .modal-body::-webkit-scrollbar-thumb,
 .add-member-form .form-content::-webkit-scrollbar-thumb {
   background: #cbd5e0;
   border-radius: 4px;
@@ -1028,7 +1045,7 @@
 
 .asistentes-list::-webkit-scrollbar-thumb:hover,
 .estudiantes-list::-webkit-scrollbar-thumb:hover,
-.modal-body::-webkit-scrollbar-thumb:hover,
+.edit-grupo-modal .modal-body::-webkit-scrollbar-thumb:hover,
 .add-member-form .form-content::-webkit-scrollbar-thumb:hover {
   background: #a0aec0;
 }

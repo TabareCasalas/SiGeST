@@ -471,7 +471,6 @@ export const grupoController = {
         where: { id_grupo: parseInt(id) },
         include: {
           tramites: true,
-          fichas: true,
           miembros_grupo: true,
         },
       });
@@ -487,21 +486,7 @@ export const grupoController = {
         });
       }
 
-      // Verificar que el grupo no tenga fichas asociadas
-      if (grupo.fichas && grupo.fichas.length > 0) {
-        return res.status(400).json({ 
-          error: `No se puede eliminar el grupo. Tiene ${grupo.fichas.length} ficha(s) asociada(s).` 
-        });
-      }
-
-      // Eliminar primero los miembros del grupo (si existen)
-      if (grupo.miembros_grupo && grupo.miembros_grupo.length > 0) {
-        await prisma.usuarioGrupo.deleteMany({
-          where: { id_grupo: parseInt(id) },
-        });
-      }
-
-      // Eliminar el grupo
+      // Eliminar el grupo (esto eliminará automáticamente los miembros_grupo por cascade)
       await prisma.grupo.delete({
         where: { id_grupo: parseInt(id) },
       });

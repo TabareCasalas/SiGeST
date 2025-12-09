@@ -253,6 +253,66 @@
 .btn-solicitudes:hover {
   background: #138496;
   transform: translateY(-1px);
+}
+
+/* Estilos para roles múltiples */
+.roles-multiple {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-left: 3px solid;
+}
+
+/* Administrativo - Azul (como responsable en grupos) */
+.role-badge.role-admin {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1565c0;
+  border-left-color: #2196f3;
+}
+
+/* Administrador Sistema - Azul más oscuro */
+.role-badge.role-admin-sistema {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1565c0;
+  border-left-color: #1976d2;
+}
+
+/* Docente - Naranja (como asistente en grupos) */
+.role-badge.role-docente {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  color: #e65100;
+  border-left-color: #ff9800;
+}
+
+/* Estudiante - Púrpura (como estudiante en grupos) */
+.role-badge.role-estudiante {
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+  color: #6a1b9a;
+  border-left-color: #9c27b0;
+}
+
+/* Consultante - Amarillo */
+.role-badge.role-consultante {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  color: #856404;
+  border-left-color: #ffc107;
+}
+
+.role-separator {
+  color: #666;
+  font-weight: 400;
+  margin: 0 0.25rem;
+}
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 

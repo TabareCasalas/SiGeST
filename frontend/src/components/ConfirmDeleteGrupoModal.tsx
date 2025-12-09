@@ -1,59 +1,49 @@
 import { FaExclamationTriangle, FaTrash } from 'react-icons/fa';
-import './ConfirmDeleteModal.css';
+import './ConfirmDeleteGrupoModal.css';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  title?: string;
-  message: string;
-  itemName?: string;
-  warningText?: string;
+  grupo: {
+    id_grupo: number;
+    nombre: string;
+  } | null;
   loading?: boolean;
 }
 
-export function ConfirmDeleteModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title = 'Confirmar Eliminación',
-  message,
-  itemName,
-  warningText,
-  loading = false 
-}: Props) {
-  if (!isOpen) return null;
+export function ConfirmDeleteGrupoModal({ isOpen, onClose, onConfirm, grupo, loading = false }: Props) {
+  if (!isOpen || !grupo) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="confirm-delete-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="confirm-delete-grupo-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-icon">
             <FaExclamationTriangle className="icon-delete" />
           </div>
-          <h2>{title}</h2>
+          <h2>Eliminar Grupo</h2>
         </div>
         <div className="modal-body">
           <p className="confirm-message">
-            {message}
+            ¿Está seguro de que desea <strong>eliminar</strong> permanentemente el grupo?
           </p>
-          {itemName && (
-            <div className="item-info">
-              <div className="info-row">
-                <span className="info-label">Elemento:</span>
-                <span className="info-value">{itemName}</span>
-              </div>
+          <div className="grupo-info">
+            <div className="info-row">
+              <span className="info-label">Nombre del Grupo:</span>
+              <span className="info-value">{grupo.nombre}</span>
             </div>
-          )}
-          {warningText && (
-            <div className="danger-box">
-              <FaExclamationTriangle className="danger-icon" />
-              <div>
-                <p className="danger-title">⚠️ Esta acción no se puede deshacer</p>
-                <p className="danger-text">{warningText}</p>
-              </div>
+          </div>
+          <div className="danger-box">
+            <FaExclamationTriangle className="danger-icon" />
+            <div>
+              <p className="danger-title">⚠️ Esta acción no se puede deshacer</p>
+              <p className="danger-text">
+                El grupo será eliminado permanentemente del sistema. Todos los datos asociados 
+                serán eliminados. Esta acción no se puede deshacer.
+              </p>
             </div>
-          )}
+          </div>
         </div>
         <div className="modal-actions">
           <button
@@ -83,4 +73,8 @@ export function ConfirmDeleteModal({
     </div>
   );
 }
+
+
+
+
 

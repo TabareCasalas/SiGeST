@@ -680,10 +680,10 @@ export const fichaController = {
     }
   },
 
-  // Asignar ficha a un grupo (por docente)
+  // Asignar ficha a un grupo (por docente o administrativo)
   async asignarAGrupo(req: AuthRequest, res: Response) {
     try {
-      // Validar que el usuario es docente
+      // Validar que el usuario es docente o administrativo con nivel_acceso 1
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -691,16 +691,20 @@ export const fichaController = {
 
       const usuario = await prisma.usuario.findUnique({
         where: { id_usuario: userId },
-        select: { rol: true },
+        select: { rol: true, nivel_acceso: true },
       });
 
       if (!usuario) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      if (usuario.rol !== 'docente') {
+      // Permitir docentes o administrativos con nivel_acceso 1
+      const puedeAsignar = usuario.rol === 'docente' || 
+                           (usuario.rol === 'administrador' && usuario.nivel_acceso === 1);
+
+      if (!puedeAsignar) {
         return res.status(403).json({
-          error: 'Solo los docentes pueden asignar fichas a grupos',
+          error: 'Solo los docentes y administrativos pueden asignar fichas a grupos',
         });
       }
 

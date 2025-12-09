@@ -70,13 +70,14 @@
   transform: scale(1.05);
 }
 
-.modal-content {
+/* Usar selector más específico para evitar conflictos con otros modales */
+.create-grupo-modal .modal-content {
   padding: 32px;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -85,7 +86,7 @@
   background: #f8fafc;
 }
 
-.modal-content .create-grupo-container {
+.create-grupo-modal .modal-content .create-grupo-container {
   padding: 0 !important;
   margin: 0 auto !important;
   max-width: 520px !important;
@@ -93,15 +94,15 @@
   box-sizing: border-box;
 }
 
-.modal-content .create-grupo-container h2 {
+.create-grupo-modal .modal-content .create-grupo-container h2 {
   display: none;
 }
 
-.modal-content .info-text {
+.create-grupo-modal .modal-content .info-text {
   margin-bottom: 1.5rem;
 }
 
-.modal-content .grupo-form {
+.create-grupo-modal .modal-content .grupo-form {
   padding: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -110,10 +111,10 @@
   box-sizing: border-box;
 }
 
-.modal-content .form-group,
-.modal-content .form-group input,
-.modal-content .form-group select,
-.modal-content .form-group textarea {
+.create-grupo-modal .modal-content .form-group,
+.create-grupo-modal .modal-content .form-group input,
+.create-grupo-modal .modal-content .form-group select,
+.create-grupo-modal .modal-content .form-group textarea {
   width: 100% !important;
   box-sizing: border-box;
 }

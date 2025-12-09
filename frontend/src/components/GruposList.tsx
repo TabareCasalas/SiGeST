@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiService } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +8,7 @@ import {
   FaSearch, FaTimes, FaPlus
 } from 'react-icons/fa';
 import { CreateGrupoModal } from './CreateGrupoModal';
-import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { ConfirmDeleteGrupoModal } from './ConfirmDeleteGrupoModal';
 import { SearchInput } from './SearchInput';
 import './GruposList.css';
 
@@ -55,18 +55,14 @@ export function GruposList() {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [grupoEliminar, setGrupoEliminar] = useState<Grupo | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [editFormData, setEditFormData] = useState({
     responsable_id: '',
     asistentes_ids: [] as string[],
     estudiantes_ids: [] as string[],
   });
-  const [showDeleteMemberModal, setShowDeleteMemberModal] = useState(false);
-  const [miembroEliminar, setMiembroEliminar] = useState<{ id_usuario_grupo: number; nombre: string } | null>(null);
-  const [showDeleteGrupoModal, setShowDeleteGrupoModal] = useState(false);
-  const [grupoEliminar, setGrupoEliminar] = useState<Grupo | null>(null);
-  const [showToggleActivoModal, setShowToggleActivoModal] = useState(false);
-  const [grupoToggleActivo, setGrupoToggleActivo] = useState<Grupo | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const { showToast } = useToast();
   const { user, hasRole, hasAccessLevel } = useAuth();
 
@@ -166,54 +162,187 @@ export function GruposList() {
   };
 
   const loadEstudiantes = async () => {
-    if (!selectedGrupo) return;
+    if (!selectedGrupo) {
+      console.log('loadEstudiantes: No hay selectedGrupo');
+      return;
+    }
     
     try {
-      const allUsers = await ApiService.getUsuarios();
+      console.log('loadEstudiantes: Iniciando carga para grupo', selectedGrupo.id_grupo);
+      
+      // Recargar el grupo completo para asegurar que tenemos la información actualizada
+      const grupoCompleto = await ApiService.getGrupoById(selectedGrupo.id_grupo);
+      console.log('loadEstudiantes: Grupo completo cargado', grupoCompleto);
       
       // Obtener IDs de estudiantes actuales del grupo
-      const estudiantesActualesIds = getMiembrosByRol(selectedGrupo, 'estudiante')
-        .map(e => e.usuario.id_usuario);
+      const estudiantesActualesIds = (grupoCompleto.miembros_grupo || [])
+        .filter((m: any) => m.rol_en_grupo === 'estudiante')
+        .map((e: any) => e.usuario.id_usuario);
+      console.log('loadEstudiantes: IDs de estudiantes actuales', estudiantesActualesIds);
       
-      // Filtrar estudiantes activos (incluir los que ya están en el grupo)
+      // Cargar todos los usuarios
+      const allUsers = await ApiService.getUsuarios();
+      console.log('loadEstudiantes: Total usuarios cargados', allUsers.length);
+      
+      // Filtrar estudiantes activos (incluir los que ya están en el grupo + los sin grupo)
       const estudiantesList = allUsers.filter((u: any) => {
-        const esEstudiante = u.rol === 'estudiante';
+        // Solo estudiantes activos
+        if (u.rol !== 'estudiante') return false;
+        
+        // Verificar si está activo (activo puede ser true, undefined, o null para activos)
         const esActivo = u.activo === true || u.activo === undefined || u.activo === null;
+        if (!esActivo) return false;
         
-        // Incluir estudiantes del grupo actual O estudiantes sin grupo
+        // Si el estudiante ya está en este grupo, siempre incluirlo
         const estaEnEsteGrupo = estudiantesActualesIds.includes(u.id_usuario);
-        const yaEnOtroGrupo = u.grupos_participa && u.grupos_participa.length > 0 && !estaEnEsteGrupo;
+        if (estaEnEsteGrupo) {
+          console.log('loadEstudiantes: Estudiante en grupo actual', u.nombre);
+          return true;
+        }
         
-        return esEstudiante && esActivo && (!yaEnOtroGrupo || estaEnEsteGrupo);
+        // Si no está en este grupo, verificar si está en otro grupo
+        // grupos_participa puede ser un array, undefined, o null
+        if (!u.grupos_participa || !Array.isArray(u.grupos_participa) || u.grupos_participa.length === 0) {
+          // No tiene grupos, está disponible
+          console.log('loadEstudiantes: Estudiante sin grupo', u.nombre);
+          return true;
+        }
+        
+        // Si tiene grupos, verificar si alguno es diferente al grupo actual
+        const estaEnOtroGrupo = u.grupos_participa.some((gp: any) => {
+          // Verificar si el grupo participado es diferente al grupo actual
+          // La estructura puede ser: gp.grupo.id_grupo o gp.id_grupo
+          const idGrupoParticipado = gp?.grupo?.id_grupo || gp?.id_grupo;
+          // Convertir a número para asegurar comparación correcta
+          const idGrupoActual = Number(selectedGrupo.id_grupo);
+          const idGrupoParticipadoNum = Number(idGrupoParticipado);
+          return idGrupoParticipadoNum && idGrupoParticipadoNum !== idGrupoActual;
+        });
+        
+        // Solo incluir si NO está en otro grupo (diferente al actual)
+        if (!estaEnOtroGrupo) {
+          console.log('loadEstudiantes: Estudiante disponible (mismo grupo o sin grupo)', u.nombre);
+        }
+        return !estaEnOtroGrupo;
       });
       
+      console.log('loadEstudiantes: Estudiantes filtrados', estudiantesList.length, estudiantesList);
       setEstudiantes(estudiantesList);
     } catch (err: any) {
+      console.error('loadEstudiantes: Error', err);
       showToast(`Error al cargar estudiantes: ${err.message}`, 'error');
     }
   };
 
-  const handleOpenModifyMembers = async () => {
-    if (!selectedGrupo) return;
+  const handleOpenModifyMembers = async (grupoParam?: Grupo) => {
+    // Usar el grupo pasado como parámetro o el selectedGrupo del estado
+    const grupoAUsar = grupoParam || selectedGrupo;
+    
+    if (!grupoAUsar) {
+      console.log('handleOpenModifyMembers: No hay grupo disponible');
+      return;
+    }
+    
+    console.log('handleOpenModifyMembers: Iniciando para grupo', grupoAUsar.id_grupo);
+    
+    // Establecer el grupo seleccionado si no estaba establecido
+    if (!selectedGrupo || selectedGrupo.id_grupo !== grupoAUsar.id_grupo) {
+      setSelectedGrupo(grupoAUsar);
+    }
     
     setShowModifyMembers(true);
     setLoadingMembers(true);
     
     try {
-      // Cargar docentes y estudiantes
-      await Promise.all([loadDocentes(), loadEstudiantes()]);
+      // Recargar el grupo completo para tener la información más actualizada
+      const grupoCompleto = await ApiService.getGrupoById(grupoAUsar.id_grupo);
+      console.log('handleOpenModifyMembers: Grupo completo cargado', grupoCompleto);
       
-      // Inicializar el formulario con los miembros actuales
-      const responsable = getMiembrosByRol(selectedGrupo, 'responsable')[0];
-      const asistentes = getMiembrosByRol(selectedGrupo, 'asistente');
-      const estudiantes = getMiembrosByRol(selectedGrupo, 'estudiante');
+      // Actualizar selectedGrupo con la información completa
+      setSelectedGrupo(grupoCompleto);
+      
+      // Cargar docentes y estudiantes (usar el grupo completo actualizado)
+      // Necesitamos pasar el grupo completo a loadEstudiantes
+      await Promise.all([
+        loadDocentes(),
+        (async () => {
+          // Llamar loadEstudiantes con el grupo completo
+          if (!grupoCompleto) return;
+          
+          try {
+            // Obtener IDs de estudiantes actuales del grupo
+            const estudiantesActualesIds = (grupoCompleto.miembros_grupo || [])
+              .filter((m: any) => m.rol_en_grupo === 'estudiante')
+              .map((e: any) => e.usuario.id_usuario);
+            console.log('handleOpenModifyMembers: IDs de estudiantes actuales', estudiantesActualesIds);
+            
+            // Cargar todos los usuarios
+            const allUsers = await ApiService.getUsuarios();
+            console.log('handleOpenModifyMembers: Total usuarios cargados', allUsers.length);
+            
+            // Filtrar estudiantes activos (incluir los que ya están en el grupo + los sin grupo)
+            const estudiantesList = allUsers.filter((u: any) => {
+              // Solo estudiantes activos
+              if (u.rol !== 'estudiante') return false;
+              
+              // Verificar si está activo (activo puede ser true, undefined, o null para activos)
+              const esActivo = u.activo === true || u.activo === undefined || u.activo === null;
+              if (!esActivo) return false;
+              
+              // Si el estudiante ya está en este grupo, siempre incluirlo
+              const estaEnEsteGrupo = estudiantesActualesIds.includes(u.id_usuario);
+              if (estaEnEsteGrupo) {
+                return true;
+              }
+              
+              // Si no está en este grupo, verificar si está en otro grupo
+              if (!u.grupos_participa || !Array.isArray(u.grupos_participa) || u.grupos_participa.length === 0) {
+                // No tiene grupos, está disponible
+                return true;
+              }
+              
+              // Si tiene grupos, verificar si alguno es diferente al grupo actual
+              const estaEnOtroGrupo = u.grupos_participa.some((gp: any) => {
+                const idGrupoParticipado = gp?.grupo?.id_grupo || gp?.id_grupo;
+                const idGrupoActual = Number(grupoCompleto.id_grupo);
+                const idGrupoParticipadoNum = Number(idGrupoParticipado);
+                return idGrupoParticipadoNum && idGrupoParticipadoNum !== idGrupoActual;
+              });
+              
+              // Solo incluir si NO está en otro grupo (diferente al actual)
+              return !estaEnOtroGrupo;
+            });
+            
+            console.log('handleOpenModifyMembers: Estudiantes filtrados', estudiantesList.length, estudiantesList);
+            setEstudiantes(estudiantesList);
+          } catch (err: any) {
+            console.error('handleOpenModifyMembers: Error cargando estudiantes', err);
+            showToast(`Error al cargar estudiantes: ${err.message}`, 'error');
+          }
+        })()
+      ]);
+      
+      // Inicializar el formulario con los miembros actuales del grupo completo
+      const miembrosEstudiantes = (grupoCompleto.miembros_grupo || [])
+        .filter((m: any) => m.rol_en_grupo === 'estudiante');
+      const miembrosAsistentes = (grupoCompleto.miembros_grupo || [])
+        .filter((m: any) => m.rol_en_grupo === 'asistente');
+      const miembrosResponsable = (grupoCompleto.miembros_grupo || [])
+        .filter((m: any) => m.rol_en_grupo === 'responsable');
+      
+      console.log('handleOpenModifyMembers: Inicializando formulario', {
+        responsable: miembrosResponsable[0]?.usuario.id_usuario,
+        asistentes: miembrosAsistentes.length,
+        estudiantes: miembrosEstudiantes.length
+      });
       
       setEditFormData({
-        responsable_id: responsable ? responsable.usuario.id_usuario.toString() : '',
-        asistentes_ids: asistentes.map(a => a.usuario.id_usuario.toString()),
-        estudiantes_ids: estudiantes.map(e => e.usuario.id_usuario.toString()),
+        responsable_id: miembrosResponsable[0] ? miembrosResponsable[0].usuario.id_usuario.toString() : '',
+        asistentes_ids: miembrosAsistentes.map((a: any) => a.usuario.id_usuario.toString()),
+        estudiantes_ids: miembrosEstudiantes.map((e: any) => e.usuario.id_usuario.toString()),
       });
     } catch (err: any) {
+      console.error('handleOpenModifyMembers: Error general', err);
       showToast(`Error: ${err.message}`, 'error');
     } finally {
       setLoadingMembers(false);
@@ -367,12 +496,13 @@ export function GruposList() {
       }
       
       showToast('Miembros actualizados exitosamente', 'success');
-      setShowModifyMembers(false);
       
-      // Recargar el grupo seleccionado
-      const grupoActualizado = await ApiService.getGrupoById(selectedGrupo.id_grupo);
-      setSelectedGrupo(grupoActualizado);
-      loadGrupos();
+      // Cerrar el modal completamente
+      setShowModifyMembers(false);
+      setSelectedGrupo(null);
+      
+      // Recargar los grupos
+      await loadGrupos();
     } catch (err: any) {
       showToast(`Error: ${err.message}`, 'error');
     } finally {
@@ -380,29 +510,22 @@ export function GruposList() {
     }
   };
 
-  const handleRemoveMemberClick = (id_usuario_grupo: number, nombre: string) => {
+  const handleRemoveMember = async (id_usuario_grupo: number) => {
     if (!selectedGrupo) return;
-    setMiembroEliminar({ id_usuario_grupo, nombre });
-    setShowDeleteMemberModal(true);
-  };
 
-  const handleRemoveMember = async () => {
-    if (!selectedGrupo || !miembroEliminar) return;
+    if (!window.confirm('¿Está seguro de que desea eliminar a este miembro del grupo?')) {
+      return;
+    }
 
-    setDeleteLoading(true);
     try {
-      await ApiService.removeMiembroGrupo(selectedGrupo.id_grupo, miembroEliminar.id_usuario_grupo);
+      await ApiService.removeMiembroGrupo(selectedGrupo.id_grupo, id_usuario_grupo);
       showToast('Miembro eliminado exitosamente', 'success');
       // Recargar el grupo seleccionado
       const grupoActualizado = await ApiService.getGrupoById(selectedGrupo.id_grupo);
       setSelectedGrupo(grupoActualizado);
       loadGrupos();
-      setShowDeleteMemberModal(false);
-      setMiembroEliminar(null);
     } catch (err: any) {
       showToast(`Error: ${err.message}`, 'error');
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
@@ -415,20 +538,18 @@ export function GruposList() {
     return true;
   };
 
-  const handleToggleActivoClick = (grupo: Grupo) => {
-    setGrupoToggleActivo(grupo);
-    setShowToggleActivoModal(true);
-  };
-
-  const handleToggleActivo = async () => {
-    if (!grupoToggleActivo) return;
+  const handleToggleActivo = async (grupo: Grupo) => {
+    const accion = grupo.activo ? 'desactivar' : 'activar';
+    if (!window.confirm(`¿Está seguro de que desea ${accion} el grupo "${grupo.nombre}"?`)) {
+      return;
+    }
 
     try {
-      if (grupoToggleActivo.activo) {
-        await ApiService.deactivateGrupo(grupoToggleActivo.id_grupo);
+      if (grupo.activo) {
+        await ApiService.deactivateGrupo(grupo.id_grupo);
         showToast('Grupo desactivado exitosamente', 'success');
       } else {
-        await ApiService.activateGrupo(grupoToggleActivo.id_grupo);
+        await ApiService.activateGrupo(grupo.id_grupo);
         showToast('Grupo activado exitosamente', 'success');
       }
       
@@ -564,6 +685,33 @@ export function GruposList() {
         onSuccess={loadGrupos}
       />
 
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmDeleteGrupoModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setGrupoEliminar(null);
+        }}
+        onConfirm={async () => {
+          if (!grupoEliminar) return;
+          
+          setDeleteLoading(true);
+          try {
+            await ApiService.deleteGrupo(grupoEliminar.id_grupo);
+            showToast('Grupo eliminado exitosamente', 'success');
+            setShowDeleteModal(false);
+            setGrupoEliminar(null);
+            await loadGrupos();
+          } catch (err: any) {
+            showToast(`Error al eliminar grupo: ${err.message}`, 'error');
+          } finally {
+            setDeleteLoading(false);
+          }
+        }}
+        grupo={grupoEliminar ? { id_grupo: grupoEliminar.id_grupo, nombre: grupoEliminar.nombre } : null}
+        loading={deleteLoading}
+      />
+
       {loading && grupos.length === 0 ? (
         <div className="grupos-list-loading">Cargando grupos...</div>
       ) : grupos.length === 0 ? (
@@ -593,8 +741,9 @@ export function GruposList() {
                 const totalTramites = grupo.tramites?.length || 0;
 
                 return (
-                  <React.Fragment key={grupo.id_grupo}>
+                  <>
                     <tr 
+                      key={grupo.id_grupo} 
                       className={`table-row ${!grupo.activo ? 'inactive-row' : ''}`}
                       onClick={() => toggleRow(grupo.id_grupo)}
                     >
@@ -644,12 +793,7 @@ export function GruposList() {
                         <div className="action-buttons">
                           {(hasRole('admin') || hasRole('docente')) && (
                             <button
-                              onClick={() => {
-                                setSelectedGrupo(grupo);
-                                setShowModifyMembers(true);
-                                loadDocentes();
-                                loadEstudiantes();
-                              }}
+                              onClick={() => handleOpenModifyMembers(grupo)}
                               className="btn-icon btn-edit"
                               title="Modificar Miembros"
                             >
@@ -660,7 +804,7 @@ export function GruposList() {
                             <button
                               onClick={() => {
                                 setGrupoEliminar(grupo);
-                                setShowDeleteGrupoModal(true);
+                                setShowDeleteModal(true);
                               }}
                               className="btn-icon btn-danger"
                               title="Eliminar Grupo"
@@ -733,7 +877,7 @@ export function GruposList() {
                         </td>
                       </tr>
                     )}
-                  </React.Fragment>
+                  </>
                 );
               })}
             </tbody>
@@ -746,7 +890,8 @@ export function GruposList() {
           setSelectedGrupo(null);
           setShowModifyMembers(false);
         }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="edit-grupo-modal">
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h2>{selectedGrupo.nombre}</h2>
@@ -773,7 +918,7 @@ export function GruposList() {
                       {hasRole('admin') && (
                         <button 
                           className={`btn-toggle-activo ${selectedGrupo.activo ? 'deactivate' : 'activate'}`}
-                          onClick={() => handleToggleActivoClick(selectedGrupo)}
+                          onClick={() => handleToggleActivo(selectedGrupo)}
                           title={selectedGrupo.activo ? 'Desactivar grupo' : 'Activar grupo'}
                         >
                           {selectedGrupo.activo ? '⏸ Desactivar' : '▶ Activar'}
@@ -802,7 +947,7 @@ export function GruposList() {
                           {canRemoveMember(m) && (hasRole('admin') || hasRole('docente')) && (
                             <button
                               className="btn-remove-member"
-                              onClick={() => handleRemoveMemberClick(m.id_usuario_grupo, m.usuario.nombre)}
+                              onClick={() => handleRemoveMember(m.id_usuario_grupo)}
                               title="Eliminar miembro"
                             >
                               ✕
@@ -829,7 +974,7 @@ export function GruposList() {
                             {(hasRole('admin') || hasRole('docente')) && (
                               <button
                                 className="btn-remove-member"
-                                onClick={() => handleRemoveMemberClick(m.id_usuario_grupo, m.usuario.nombre)}
+                                onClick={() => handleRemoveMember(m.id_usuario_grupo)}
                                 title="Eliminar miembro"
                               >
                                 ✕
@@ -856,7 +1001,7 @@ export function GruposList() {
                             {(hasRole('admin') || hasRole('docente')) && (
                               <button
                                 className="btn-remove-member"
-                                onClick={() => handleRemoveMemberClick(m.id_usuario_grupo, m.usuario.nombre)}
+                                onClick={() => handleRemoveMember(m.id_usuario_grupo)}
                                 title="Eliminar miembro"
                               >
                                 ✕
@@ -967,7 +1112,10 @@ export function GruposList() {
                         <div className="form-actions">
                           <button
                             className="btn-cancel"
-                            onClick={() => setShowModifyMembers(false)}
+                            onClick={() => {
+                              setShowModifyMembers(false);
+                              setSelectedGrupo(null);
+                            }}
                             disabled={saving}
                           >
                             Cancelar
@@ -987,66 +1135,9 @@ export function GruposList() {
               )}
             </div>
           </div>
+          </div>
         </div>
       )}
-
-      {/* Modal de confirmación para eliminar miembro */}
-      <ConfirmDeleteModal
-        isOpen={showDeleteMemberModal}
-        onClose={() => {
-          setShowDeleteMemberModal(false);
-          setMiembroEliminar(null);
-        }}
-        onConfirm={handleRemoveMember}
-        title="Eliminar Miembro del Grupo"
-        message="¿Está seguro de que desea eliminar a este miembro del grupo?"
-        itemName={miembroEliminar?.nombre}
-        warningText="Esta acción no se puede deshacer. El miembro será eliminado del grupo."
-        loading={deleteLoading}
-      />
-
-      {/* Modal de confirmación para eliminar grupo */}
-      <ConfirmDeleteModal
-        isOpen={showDeleteGrupoModal}
-        onClose={() => {
-          setShowDeleteGrupoModal(false);
-          setGrupoEliminar(null);
-        }}
-        onConfirm={async () => {
-          if (!grupoEliminar) return;
-          
-          setDeleteLoading(true);
-          try {
-            await ApiService.deleteGrupo(grupoEliminar.id_grupo);
-            showToast('Grupo eliminado exitosamente', 'success');
-            await loadGrupos();
-            setShowDeleteGrupoModal(false);
-            setGrupoEliminar(null);
-          } catch (err: any) {
-            showToast(`Error al eliminar grupo: ${err.message}`, 'error');
-          } finally {
-            setDeleteLoading(false);
-          }
-        }}
-        title="Eliminar Grupo"
-        message={`¿Está seguro de que desea eliminar el grupo "${grupoEliminar?.nombre}"?`}
-        warningText="Esta acción no se puede deshacer. El grupo será eliminado permanentemente."
-        loading={deleteLoading}
-      />
-
-      {/* Modal de confirmación para activar/desactivar grupo */}
-      <ConfirmDeleteModal
-        isOpen={showToggleActivoModal}
-        onClose={() => {
-          setShowToggleActivoModal(false);
-          setGrupoToggleActivo(null);
-        }}
-        onConfirm={handleToggleActivo}
-        title={grupoToggleActivo?.activo ? "Desactivar Grupo" : "Activar Grupo"}
-        message={`¿Está seguro de que desea ${grupoToggleActivo?.activo ? 'desactivar' : 'activar'} el grupo "${grupoToggleActivo?.nombre}"?`}
-        itemName={grupoToggleActivo?.nombre}
-        loading={false}
-      />
     </div>
   );
 }

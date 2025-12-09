@@ -19,8 +19,8 @@ router.get('/me', authMiddleware, authController.me);
 // Ruta: POST /api/auth/cambiar-password (requiere autenticación)
 router.post('/cambiar-password', authMiddleware, authController.cambiarPassword);
 
-// Ruta: PATCH /api/auth/perfil (requiere autenticación, usuario actualiza su propio perfil)
-router.patch('/perfil', authMiddleware, authController.updateProfile);
+// Ruta: POST /api/auth/cambiar-rol-activo (requiere autenticación)
+router.post('/cambiar-rol-activo', authMiddleware, authController.cambiarRolActivo);
 
 export default router;
 

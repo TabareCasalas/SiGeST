@@ -11,6 +11,10 @@
   z-index: 1000;
 }
 
+.modal-overlay.hidden {
+  display: none;
+}
+
 .create-ficha-modal {
   background: white;
   border-radius: 8px;
@@ -61,19 +65,20 @@
   color: var(--text-primary, #333);
 }
 
-.modal-content {
+/* Usar selector más específico para evitar conflictos con otros modales */
+.create-ficha-modal .modal-content {
   padding: 24px;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
 
-.modal-content .create-ficha-form {
+.create-ficha-modal .modal-content .create-ficha-form {
   padding: 0 !important;
   margin: 0 !important;
   max-width: 100% !important;
@@ -88,40 +93,60 @@
   min-height: 0;
 }
 
-.modal-content .create-ficha-form .form-content {
+.create-ficha-modal .modal-content .create-ficha-form .form-content {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box;
 }
 
-.modal-content .create-ficha-form .form-header {
+/* Asegurar que cualquier contenedor con clase fichas-container dentro del modal ocupe todo el ancho */
+.create-ficha-modal .fichas-container,
+.create-ficha-modal .modal-content .fichas-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.create-ficha-modal .modal-content .create-ficha-form .form-header {
   margin-bottom: 1rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
 }
 
-.modal-content .create-ficha-form .form-header h2 {
+.create-ficha-modal .modal-content .create-ficha-form .form-header h2 {
   display: none;
 }
 
-.modal-content .create-ficha-form .form-subtitle {
+.create-ficha-modal .modal-content .create-ficha-form .form-subtitle {
   display: none;
 }
 
-.modal-content .create-ficha-form .form-content {
+.create-ficha-modal .modal-content .create-ficha-form .form-content {
   gap: 1rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
 }
 
-.modal-content .form-row,
-.modal-content .form-group,
-.modal-content .form-group input,
-.modal-content .form-group select,
-.modal-content .form-group textarea {
+.create-ficha-modal .modal-content .form-row,
+.create-ficha-modal .modal-content .form-group,
+.create-ficha-modal .modal-content .form-group input,
+.create-ficha-modal .modal-content .form-group select,
+.create-ficha-modal .modal-content .form-group textarea {
   width: 100% !important;
   box-sizing: border-box;
 }
 
-.modal-content .form-row {
+.create-ficha-modal .modal-content .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
+}
+
+.create-ficha-modal .modal-content .create-ficha-form .form-actions {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
 }
 

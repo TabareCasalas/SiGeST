@@ -27,7 +27,10 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copiar configuración personalizada de nginx
+# Usar nginx.prod.conf si existe (producción), sino usar nginx.conf (desarrollo)
+COPY nginx.prod.conf* /tmp/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN if [ -f /tmp/nginx.prod.conf ]; then cp /tmp/nginx.prod.conf /etc/nginx/conf.d/default.conf; fi
 
 # Exponer puerto 80
 EXPOSE 80

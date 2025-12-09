@@ -2,21 +2,21 @@ services:
   # Base de datos PostgreSQL
   postgres:
     image: postgres:15-alpine
-    container_name: sigest_postgres
+    container_name: sgst_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-sigest_db}
-      POSTGRES_USER: ${POSTGRES_USER:-sigest_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sigest_password}
+      POSTGRES_DB: ${POSTGRES_DB:-sgst_db}
+      POSTGRES_USER: ${POSTGRES_USER:-sgst_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sgst_password}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - sigest_network
+      - sgst_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sigest_user} -d ${POSTGRES_DB:-sigest_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sgst_user} -d ${POSTGRES_DB:-sgst_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,10 +24,10 @@ services:
   # PgAdmin (opcional, para administración de BD)
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: sigest_pgadmin
+    container_name: sgst_pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@sigest.com}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@sgst.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
@@ -35,7 +35,7 @@ services:
     depends_on:
       - postgres
     networks:
-      - sigest_network
+      - sgst_network
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
@@ -46,5 +46,5 @@ volumes:
     driver: local
 
 networks:
-  sigest_network:
+  sgst_network:
     driver: bridge

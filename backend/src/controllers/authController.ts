@@ -24,7 +24,7 @@ export const authController = {
         return res.status(400).json({ error: 'CI y contraseña son requeridos' });
       }
 
-      // Buscar usuario por CI con información de grupos
+      // Buscar usuario por CI con información de grupos y roles secundarios
       const usuario = await prisma.usuario.findUnique({
         where: { ci },
         include: {
@@ -33,6 +33,7 @@ export const authController = {
               grupo: true,
             },
           },
+          roles_secundarios: true,
         },
       });
 
@@ -73,9 +74,28 @@ export const authController = {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
+      // Obtener roles disponibles (rol principal + roles secundarios)
+      const rolesDisponibles = [usuario.rol];
+      if (usuario.roles_secundarios) {
+        usuario.roles_secundarios.forEach((ur) => {
+          if (!rolesDisponibles.includes(ur.rol)) {
+            rolesDisponibles.push(ur.rol);
+          }
+        });
+      }
+
+      // Determinar rol activo (rol_activo si existe, sino rol principal)
+      const rolActivo = usuario.rol_activo || usuario.rol;
+
       // Generar tokens
       const accessToken = jwt.sign(
-        { id: usuario.id_usuario, ci: usuario.ci, rol: usuario.rol },
+        { 
+          id: usuario.id_usuario, 
+          ci: usuario.ci, 
+          rol: usuario.rol,
+          rol_activo: rolActivo,
+          roles_disponibles: rolesDisponibles,
+        },
         JWT_SECRET,
         { expiresIn: ACCESS_TOKEN_EXPIRY }
       );
@@ -106,7 +126,11 @@ export const authController = {
       res.json({
         accessToken,
         refreshToken,
-        usuario: usuarioSinPassword,
+        usuario: {
+          ...usuarioSinPassword,
+          roles_disponibles: rolesDisponibles,
+          rol_activo: rolActivo,
+        },
         debeCambiarPassword: usuario.debe_cambiar_password || false,
       });
     } catch (error: any) {
@@ -214,6 +238,92 @@ export const authController = {
   },
 
   /**
+   * Cambiar rol activo: Permite al usuario cambiar entre sus roles disponibles
+   */
+  async cambiarRolActivo(req: AuthRequest, res: Response) {
+    try {
+      const { rol } = req.body;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+      }
+
+      if (!rol) {
+        return res.status(400).json({ error: 'Rol requerido' });
+      }
+
+      // Obtener usuario con roles secundarios
+      const usuario = await prisma.usuario.findUnique({
+        where: { id_usuario: userId },
+        include: {
+          roles_secundarios: true,
+        },
+      });
+
+      if (!usuario) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Verificar que el rol solicitado esté disponible para el usuario
+      const rolesDisponibles = [usuario.rol];
+      usuario.roles_secundarios.forEach((ur) => {
+        if (!rolesDisponibles.includes(ur.rol)) {
+          rolesDisponibles.push(ur.rol);
+        }
+      });
+
+      if (!rolesDisponibles.includes(rol)) {
+        return res.status(403).json({ 
+          error: 'Rol no disponible para este usuario',
+          roles_disponibles: rolesDisponibles,
+        });
+      }
+
+      // Actualizar rol activo
+      await prisma.usuario.update({
+        where: { id_usuario: userId },
+        data: {
+          rol_activo: rol === usuario.rol ? null : rol, // Si es el rol principal, poner null
+        },
+      });
+
+      // Generar nuevo token con el rol activo actualizado
+      const nuevoAccessToken = jwt.sign(
+        { 
+          id: usuario.id_usuario, 
+          ci: usuario.ci, 
+          rol: usuario.rol,
+          rol_activo: rol === usuario.rol ? null : rol,
+          roles_disponibles: rolesDisponibles,
+        },
+        JWT_SECRET,
+        { expiresIn: ACCESS_TOKEN_EXPIRY }
+      );
+
+      // Registrar auditoría
+      await prisma.auditoria.create({
+        data: {
+          id_usuario: userId,
+          tipo_entidad: 'auth',
+          accion: 'cambiar_rol_activo',
+          detalles: `Usuario cambió su rol activo a: ${rol}`,
+          ip_address: req.ip || 'unknown',
+        },
+      });
+
+      res.json({
+        message: 'Rol activo cambiado exitosamente',
+        accessToken: nuevoAccessToken,
+        rol_activo: rol === usuario.rol ? null : rol,
+      });
+    } catch (error: any) {
+      console.error('Error al cambiar rol activo:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  },
+
+  /**
    * Refresh: Generar nuevo access token usando refresh token
    */
   async refresh(req: Request, res: Response) {
@@ -271,6 +381,7 @@ export const authController = {
               grupo: true,
             },
           },
+          roles_secundarios: true,
         },
       });
 
@@ -278,97 +389,27 @@ export const authController = {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
+      // Obtener roles disponibles
+      const rolesDisponibles = [usuario.rol];
+      usuario.roles_secundarios.forEach((ur) => {
+        if (!rolesDisponibles.includes(ur.rol)) {
+          rolesDisponibles.push(ur.rol);
+        }
+      });
+
+      // Determinar rol activo
+      const rolActivo = usuario.rol_activo || usuario.rol;
+
       // Responder sin password
       const { password: _, ...usuarioSinPassword } = usuario;
       
-      res.json(usuarioSinPassword);
+      res.json({
+        ...usuarioSinPassword,
+        roles_disponibles: rolesDisponibles,
+        rol_activo: rolActivo,
+      });
     } catch (error: any) {
       console.error('Error en me:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
-    }
-  },
-
-  /**
-   * Actualizar perfil propio: Permite al usuario actualizar sus propios datos
-   * (sin permisos de admin, solo datos personales)
-   */
-  async updateProfile(req: AuthRequest, res: Response) {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: 'No autenticado' });
-      }
-
-      const { nombre, domicilio, telefono, correo, correos_adicionales } = req.body;
-
-      // Obtener usuario actual
-      const currentUser = await prisma.usuario.findUnique({
-        where: { id_usuario: userId },
-      });
-
-      if (!currentUser) {
-        return res.status(404).json({ error: 'Usuario no encontrado' });
-      }
-
-      // Solo permitir actualizar campos personales (no rol, nivel_acceso, ci, etc.)
-      const updateData: any = {};
-      if (nombre !== undefined) updateData.nombre = nombre;
-      if (domicilio !== undefined) updateData.domicilio = domicilio;
-      if (telefono !== undefined) updateData.telefono = telefono;
-      if (correo !== undefined) updateData.correo = correo;
-      if (correos_adicionales !== undefined) {
-        updateData.correos_adicionales = correos_adicionales || null;
-      }
-
-      // Validar que el correo no esté duplicado (si se está cambiando)
-      if (correo && correo !== currentUser.correo) {
-        const correoExistente = await prisma.usuario.findUnique({
-          where: { correo },
-        });
-        if (correoExistente) {
-          return res.status(409).json({ error: 'Ya existe un usuario con ese correo electrónico' });
-        }
-      }
-
-      // Actualizar usuario
-      const usuario = await prisma.usuario.update({
-        where: { id_usuario: userId },
-        data: updateData,
-        include: {
-          grupos_participa: {
-            include: {
-              grupo: true,
-            },
-          },
-        },
-      });
-
-      // Registrar auditoría
-      const changes: string[] = [];
-      if (nombre && nombre !== currentUser.nombre) changes.push(`nombre: ${currentUser.nombre} → ${nombre}`);
-      if (domicilio && domicilio !== currentUser.domicilio) changes.push(`domicilio actualizado`);
-      if (telefono && telefono !== currentUser.telefono) changes.push(`teléfono actualizado`);
-      if (correo && correo !== currentUser.correo) changes.push(`correo: ${currentUser.correo} → ${correo}`);
-
-      if (changes.length > 0) {
-        await AuditoriaService.crearDesdeRequest(req, {
-          id_usuario: userId,
-          tipo_entidad: 'usuario',
-          id_entidad: usuario.id_usuario,
-          accion: 'modificar_perfil',
-          detalles: `Usuario actualizó su perfil. Cambios: ${changes.join(', ')}`,
-        });
-      }
-
-      // Responder sin password
-      const { password: _, ...usuarioSinPassword } = usuario;
-      
-      res.json(usuarioSinPassword);
-    } catch (error: any) {
-      if (error.code === 'P2002') {
-        return res.status(409).json({ error: 'Ya existe un usuario con ese correo electrónico' });
-      }
-      console.error('Error al actualizar perfil:', error);
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   },

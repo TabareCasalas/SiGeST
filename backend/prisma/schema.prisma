@@ -18,7 +18,8 @@ model Usuario {
   telefono      String
   correo        String   @unique
   password      String? // Contraseña hasheada con bcrypt (opcional por ahora)
-  rol           String   @default("estudiante") // estudiante, docente, consultante, administrador
+  rol           String   @default("estudiante") // estudiante, docente, consultante, administrador (rol principal)
+  rol_activo    String? // Rol que el usuario está usando actualmente (puede ser diferente al rol principal)
   nivel_acceso  Int? // Para administradores: 1=administrativo (unificado), 3=sistema (null para otros roles)
   activo        Boolean  @default(true)
   semestre      String? // Para estudiantes
@@ -38,6 +39,7 @@ model Usuario {
   notificaciones_enviadas  Notificacion[]     @relation("NotificacionesEnviadas")
   solicitud_reactivacion   SolicitudReactivacion?
   solicitudes_procesadas   SolicitudReactivacion[] @relation("SolicitudesProcesadas")
+  roles_secundarios        UsuarioRol[] // Roles adicionales que el usuario puede usar
 }
 
 model SolicitudReactivacion {
@@ -218,4 +220,19 @@ model Ficha {
   @@index([id_grupo])
   @@index([estado])
   @@index([numero_consulta])
+}
+
+// Tabla para roles secundarios (permite que un usuario tenga múltiples roles)
+model UsuarioRol {
+  id              Int      @id @default(autoincrement())
+  id_usuario       Int
+  rol             String   // docente, administrador
+  nivel_acceso    Int?     // Para administradores: 1=administrativo, 3=sistema
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@unique([id_usuario, rol])
+  @@index([id_usuario])
 }

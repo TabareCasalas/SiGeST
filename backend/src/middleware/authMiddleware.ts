@@ -8,6 +8,8 @@ export interface AuthRequest extends Request {
     id: number;
     ci: string;
     rol: string;
+    rol_activo?: string; // Rol que el usuario está usando actualmente
+    roles_disponibles?: string[]; // Todos los roles que el usuario puede usar
   };
 }
 
@@ -26,7 +28,13 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { id: number; ci: string; rol: string };
+      const decoded = jwt.verify(token, JWT_SECRET) as { 
+        id: number; 
+        ci: string; 
+        rol: string; 
+        rol_activo?: string;
+        roles_disponibles?: string[];
+      };
       req.user = decoded;
       next();
     } catch (error) {

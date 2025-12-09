@@ -62,19 +62,20 @@
   color: var(--text-primary, #333);
 }
 
-.modal-content {
+/* Usar selector más específico para evitar conflictos con otros modales */
+.create-usuario-modal .modal-content {
   padding: 24px;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
 
-.modal-content .create-usuario-container {
+.create-usuario-modal .modal-content .create-usuario-container {
   padding: 0 !important;
   margin: 0 !important;
   max-width: 100% !important;
@@ -85,11 +86,11 @@
   flex-direction: column;
 }
 
-.modal-content .create-usuario-container h2 {
+.create-usuario-modal .modal-content .create-usuario-container h2 {
   display: none;
 }
 
-.modal-content .usuario-form {
+.create-usuario-modal .modal-content .usuario-form {
   padding: 0 !important;
   border: none !important;
   box-shadow: none !important;
@@ -99,16 +100,16 @@
   box-sizing: border-box;
 }
 
-.modal-content .form-row,
-.modal-content .form-group,
-.modal-content .form-group input,
-.modal-content .form-group select,
-.modal-content .form-group textarea {
+.create-usuario-modal .modal-content .form-row,
+.create-usuario-modal .modal-content .form-group,
+.create-usuario-modal .modal-content .form-group input,
+.create-usuario-modal .modal-content .form-group select,
+.create-usuario-modal .modal-content .form-group textarea {
   width: 100% !important;
   box-sizing: border-box;
 }
 
-.modal-content .form-row {
+.create-usuario-modal .modal-content .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;

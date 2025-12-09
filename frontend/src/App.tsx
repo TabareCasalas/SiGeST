@@ -7,17 +7,19 @@ import { FichasList } from './components/FichasList';
 import { EstudianteGrupoInfo } from './components/EstudianteGrupoInfo';
 import { EstudianteFichasList } from './components/EstudianteFichasList';
 import { NotificacionesPanel } from './components/NotificacionesPanel';
+import { NotificacionesBadge } from './components/NotificacionesBadge';
 import { AuditoriasList } from './components/AuditoriasList';
 import { ReportesPanel } from './components/ReportesPanel';
-import { MiPerfil } from './components/MiPerfil';
 import { Login } from './components/Login';
 import { NotificationBanner } from './components/NotificationBanner';
 import { ToastContainer } from './components/ToastContainer';
 import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { FaSignOutAlt, FaUser, FaBell } from 'react-icons/fa';
+import { RolSelector } from './components/RolSelector';
+import { UserProfile } from './components/UserProfile';
+import { FaSignOutAlt, FaUser, FaBell, FaChevronDown } from 'react-icons/fa';
 
-type View = 'tramites' | 'usuarios' | 'grupos' | 'fichas' | 'mis_tramites' | 'consultar_tramite' | 'mi_grupo' | 'notificaciones' | 'auditorias' | 'reportes' | 'mi_perfil';
+type View = 'tramites' | 'usuarios' | 'grupos' | 'fichas' | 'mis_tramites' | 'consultar_tramite' | 'mi_grupo' | 'notificaciones' | 'auditorias' | 'reportes' | 'perfil';
 
 interface MenuItem {
   id: string;
@@ -28,7 +30,7 @@ interface MenuItem {
 }
 
 function AppContent() {
-  const { user, logout, isAuthenticated, isLoading, hasRole, hasAccessLevel } = useAuth();
+  const { user, logout, isAuthenticated, isLoading, hasRole, hasAccessLevel, getRolEfectivo } = useAuth();
   const [notificacionesOpen, setNotificacionesOpen] = useState(false);
   const [currentView, setCurrentView] = useState<View>('tramites');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -38,10 +40,11 @@ function AppContent() {
   // Actualizar vista inicial cuando se carga el usuario
   useEffect(() => {
     if (user) {
+      const rolEfectivo = getRolEfectivo();
       let initialView: View = 'tramites';
-      if (user.rol === 'estudiante') {
+      if (rolEfectivo === 'estudiante') {
         initialView = 'mi_grupo';
-      } else if (user.rol === 'consultante') {
+      } else if (rolEfectivo === 'consultante') {
         initialView = 'mis_tramites';
       }
       setCurrentView(initialView);
@@ -167,20 +170,8 @@ function AppContent() {
           </button>
         </div>
 
-        {/* Usuario actual */}
-        {sidebarOpen && (
-          <div className="sidebar-user-info">
-            <div className="user-avatar">
-              <FaUser />
-            </div>
-            <div className="user-details">
-              <strong>{user.nombre}</strong>
-              <span className={`user-role role-${user.rol}`}>
-                {getRoleLabel(user.rol, user.nivel_acceso)}
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Selector de rol (si tiene múltiples roles) */}
+        {sidebarOpen && <RolSelector />}
 
         <nav className="sidebar-nav">
           {filteredMenu.map((item) => (
@@ -242,30 +233,32 @@ function AppContent() {
               {currentView === 'notificaciones' && '🔔 Notificaciones'}
               {currentView === 'auditorias' && '📋 Auditorías del Sistema'}
               {currentView === 'reportes' && '📊 Reportes del Sistema'}
-              {currentView === 'mi_perfil' && '👤 Mi Perfil'}
+              {currentView === 'perfil' && '👤 Mi Perfil'}
             </h1>
           </div>
-          <div className="header-actions">
-            <button
-              onClick={() => setCurrentView('mi_perfil')}
-              className="btn-profile"
-              title="Mi Perfil"
-            >
+          <div className="header-user-info" onClick={() => setCurrentView('perfil')}>
+            <div className="header-user-avatar">
               <FaUser />
-              <span>Mi Perfil</span>
-            </button>
+            </div>
+            <div className="header-user-details">
+              <strong>{user.nombre}</strong>
+              <span className="header-user-role">
+                {getRoleLabel(getRolEfectivo(), user.nivel_acceso)}
+              </span>
+            </div>
+            <FaChevronDown className="header-user-chevron" />
           </div>
         </header>
 
         <div className="content-area">
           {/* Vistas según rol */}
-          {currentView === 'tramites' && (hasRole(['admin', 'docente'])) && (
+          {currentView === 'tramites' && (hasRole('admin') || hasRole('docente')) && (
             <TramitesList key={refreshKey} />
           )}
-          {currentView === 'grupos' && (hasRole(['admin', 'docente'])) && (
+          {currentView === 'grupos' && (hasRole('admin') || hasRole('docente')) && (
             <GruposList key={refreshKey} />
           )}
-          {currentView === 'fichas' && (hasRole('admin') && hasAccessLevel(1) || hasRole('docente')) && (
+          {currentView === 'fichas' && ((hasRole('admin') && hasAccessLevel(1)) || hasRole('docente')) && (
             <FichasList key={refreshKey} />
           )}
           {currentView === 'fichas' && hasRole('estudiante') && (
@@ -277,7 +270,7 @@ function AppContent() {
           {currentView === 'mi_grupo' && hasRole('estudiante') && (
             <EstudianteGrupoInfo key={refreshKey} />
           )}
-          {currentView === 'mis_tramites' && hasRole(['estudiante', 'consultante']) && (
+          {currentView === 'mis_tramites' && (hasRole('estudiante') || hasRole('consultante')) && (
             <TramitesList key={refreshKey} />
           )}
           {currentView === 'notificaciones' && (
@@ -294,8 +287,8 @@ function AppContent() {
           {currentView === 'reportes' && hasRole('admin') && (
             <ReportesPanel key={refreshKey} />
           )}
-          {currentView === 'mi_perfil' && (
-            <MiPerfil />
+          {currentView === 'perfil' && (
+            <UserProfile key={refreshKey} />
           )}
         </div>
 

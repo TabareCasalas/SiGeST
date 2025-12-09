@@ -65,10 +65,68 @@ export function Login() {
     window.location.reload();
   };
 
-  const handleQuickLogin = (testCi: string) => {
+  const handleQuickLogin = async (testCi: string) => {
     setCi(testCi);
-    setPassword('password123');
+    setPassword(testCi);
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await login(testCi, testCi);
+      // Si el resultado indica que debe cambiar la contraseña
+      if (result && 'debeCambiarPassword' in result && result.debeCambiarPassword) {
+        setPasswordTemporal(testCi);
+        setMostrarCambiarPassword(true);
+        setLoading(false);
+      }
+    } catch (err: any) {
+      // Verificar si el error es por usuario inactivo
+      try {
+        const errorData = JSON.parse(err.message);
+        if (errorData.error === 'Usuario inactivo') {
+          setInfoReactivacion({
+            puedeSolicitar: errorData.puedeSolicitarReactivacion,
+            tieneSolicitudPendiente: errorData.tieneSolicitudPendiente,
+            tieneSolicitudAprobada: errorData.tieneSolicitudAprobada,
+            tieneSolicitudRechazada: errorData.tieneSolicitudRechazada,
+          });
+          setMostrarSolicitarReactivacion(true);
+          setError('');
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // No es JSON, continuar con el error normal
+      }
+      setError(err.message || 'Error al iniciar sesión');
+      setLoading(false);
+    }
   };
+
+  // Credenciales de prueba
+  const consultantesPrueba = [
+    { nombre: 'Carlos MARTINEZ LOPEZ', ci: '50000000' },
+    { nombre: 'Ana GONZALEZ RODRIGUEZ', ci: '50000016' },
+    { nombre: 'Luis FERNANDEZ SILVA', ci: '50000022' },
+  ];
+
+  const estudiantesPrueba = [
+    { nombre: 'María SANTOS PEREZ', ci: '60000008' },
+    { nombre: 'Juan TORRES GARCIA', ci: '60000014' },
+    { nombre: 'Lucía RAMIREZ CASTRO', ci: '60000020' },
+    { nombre: 'Diego MORALES VEGA', ci: '60000036' },
+    { nombre: 'Sofía HERRERA MENDEZ', ci: '60000042' },
+    { nombre: 'Andrés JIMENEZ RUIZ', ci: '60000058' },
+  ];
+
+  const docentePrueba = [
+    { nombre: 'Roberto MARTINEZ GARCIA', ci: '70000006' },
+  ];
+
+  const administrativoPrueba = [
+    { nombre: 'María LOPEZ FERNANDEZ', ci: '80000004' },
+  ];
+
 
   return (
     <div className="login-container">
@@ -92,11 +150,14 @@ export function Login() {
               type="text"
               value={ci}
               onChange={(e) => setCi(e.target.value)}
-              placeholder="Ingrese su CI"
+              placeholder="Ingrese su CI (sin puntos ni guiones)"
               required
               disabled={loading}
               autoFocus
             />
+            <small className="form-hint">
+              Ingrese su CI sin puntos ni guiones (ejemplo: 12345678)
+            </small>
           </div>
 
           <div className="form-group">
@@ -135,103 +196,75 @@ export function Login() {
           </button>
         </form>
 
+        {/* Credenciales de prueba */}
         <div className="test-credentials">
-          <div className="test-credentials-header">
-            <h3>🧪 Credenciales de Prueba</h3>
-            <p className="test-hint">Haz clic en cualquier usuario para llenar automáticamente el formulario</p>
-          </div>
-          
-          <div className="credentials-grid">
-            <div className="credential-card admin">
-              <div className="credential-header">
-                <span className="credential-badge">🔴 Admin Sistema</span>
-              </div>
-              <div className="credential-info">
-                <p><strong>CI:</strong> 12345678</p>
-                <p><strong>Password:</strong> password123</p>
-                <button 
-                  className="credential-btn"
-                  onClick={() => handleQuickLogin('12345678')}
+          <div className="test-credentials-section">
+            <h3>Administrativo de Prueba</h3>
+            <div className="credentials-grid">
+              {administrativoPrueba.map((admin) => (
+                <button
+                  key={admin.ci}
+                  className="credential-item credential-admin"
+                  onClick={() => handleQuickLogin(admin.ci)}
                   disabled={loading}
+                  title={`CI: ${admin.ci} | Password: ${admin.ci}`}
                 >
-                  Usar este usuario
+                  <span className="credential-name">{admin.nombre}</span>
                 </button>
-              </div>
-            </div>
-
-            <div className="credential-card admin">
-              <div className="credential-header">
-                <span className="credential-badge">🟡 Administrativo</span>
-              </div>
-              <div className="credential-info">
-                <p><strong>CI:</strong> 34567890</p>
-                <p><strong>Password:</strong> password123</p>
-                <button 
-                  className="credential-btn"
-                  onClick={() => handleQuickLogin('34567890')}
-                  disabled={loading}
-                >
-                  Usar este usuario
-                </button>
-              </div>
-            </div>
-
-            <div className="credential-card docente">
-              <div className="credential-header">
-                <span className="credential-badge">👨‍🏫 Docente</span>
-              </div>
-              <div className="credential-info">
-                <p><strong>CI:</strong> 11111111</p>
-                <p><strong>Password:</strong> password123</p>
-                <button 
-                  className="credential-btn"
-                  onClick={() => handleQuickLogin('11111111')}
-                  disabled={loading}
-                >
-                  Usar este usuario
-                </button>
-              </div>
-            </div>
-
-            <div className="credential-card estudiante">
-              <div className="credential-header">
-                <span className="credential-badge">👨‍🎓 Estudiante</span>
-              </div>
-              <div className="credential-info">
-                <p><strong>CI:</strong> 55555555</p>
-                <p><strong>Password:</strong> password123</p>
-                <button 
-                  className="credential-btn"
-                  onClick={() => handleQuickLogin('55555555')}
-                  disabled={loading}
-                >
-                  Usar este usuario
-                </button>
-              </div>
-            </div>
-
-            <div className="credential-card consultante">
-              <div className="credential-header">
-                <span className="credential-badge">🧑‍💼 Consultante</span>
-              </div>
-              <div className="credential-info">
-                <p><strong>CI:</strong> 40404040</p>
-                <p><strong>Password:</strong> password123</p>
-                <button 
-                  className="credential-btn"
-                  onClick={() => handleQuickLogin('40404040')}
-                  disabled={loading}
-                >
-                  Usar este usuario
-                </button>
-              </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        <div className="login-footer">
-          <p>Sistema de Gestión de Trámites Notariales</p>
-          <small>© 2024 Clínica Notarial Universitaria</small>
+          <div className="test-credentials-section">
+            <h3>Docente de Prueba</h3>
+            <div className="credentials-grid">
+              {docentePrueba.map((docente) => (
+                <button
+                  key={docente.ci}
+                  className="credential-item credential-docente"
+                  onClick={() => handleQuickLogin(docente.ci)}
+                  disabled={loading}
+                  title={`CI: ${docente.ci} | Password: ${docente.ci}`}
+                >
+                  <span className="credential-name">{docente.nombre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="test-credentials-section">
+            <h3>Estudiantes de Prueba</h3>
+            <div className="credentials-grid">
+              {estudiantesPrueba.map((estudiante) => (
+                <button
+                  key={estudiante.ci}
+                  className="credential-item credential-estudiante"
+                  onClick={() => handleQuickLogin(estudiante.ci)}
+                  disabled={loading}
+                  title={`CI: ${estudiante.ci} | Password: ${estudiante.ci}`}
+                >
+                  <span className="credential-name">{estudiante.nombre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="test-credentials-section">
+            <h3>Consultantes de Prueba</h3>
+            <div className="credentials-grid">
+              {consultantesPrueba.map((consultante) => (
+                <button
+                  key={consultante.ci}
+                  className="credential-item credential-consultante"
+                  onClick={() => handleQuickLogin(consultante.ci)}
+                  disabled={loading}
+                  title={`CI: ${consultante.ci} | Password: ${consultante.ci}`}
+                >
+                  <span className="credential-name">{consultante.nombre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

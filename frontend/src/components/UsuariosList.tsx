@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ApiService } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,6 +46,13 @@ interface Usuario {
   fecha_desactivacion_automatica?: string;
   created_at?: string;
   updated_at?: string;
+  roles_disponibles?: string[];
+  roles_secundarios?: Array<{
+    id: number;
+    id_usuario: number;
+    rol: string;
+    nivel_acceso?: number;
+  }>;
   grupos_participa?: Array<{
     grupo: {
       id_grupo: number;
@@ -203,6 +210,73 @@ export function UsuariosList() {
     return labels[rol] || rol;
   };
 
+  const getRoleBadgeClass = (rol: string, nivel_acceso?: number) => {
+    if (rol === 'administrador') {
+      return nivel_acceso === 3 ? 'role-badge role-admin-sistema' : 'role-badge role-admin';
+    }
+    if (rol === 'docente') {
+      return 'role-badge role-docente';
+    }
+    if (rol === 'estudiante') {
+      return 'role-badge role-estudiante';
+    }
+    if (rol === 'consultante') {
+      return 'role-badge role-consultante';
+    }
+    return 'role-badge';
+  };
+
+  const getRolesDisplay = (usuario: Usuario) => {
+    const roles = usuario.roles_disponibles || [usuario.rol];
+    const rolesUnicos = [...new Set(roles)]; // Eliminar duplicados
+    
+    if (rolesUnicos.length === 1) {
+      // Si solo tiene un rol, mostrar normalmente
+      const rolUnico = rolesUnicos[0];
+      let nivelAcceso = usuario.nivel_acceso;
+      if (rolUnico === 'administrador' && usuario.roles_secundarios) {
+        const rolSecundario = usuario.roles_secundarios.find(ur => ur.rol === 'administrador');
+        if (rolSecundario) {
+          nivelAcceso = rolSecundario.nivel_acceso;
+        }
+      }
+      return (
+        <span className={getRoleBadgeClass(rolUnico, nivelAcceso)}>
+          {getRoleLabel(rolUnico, nivelAcceso)}
+        </span>
+      );
+    }
+    
+    // Si tiene múltiples roles, mostrar todos
+    return (
+      <div className="roles-multiple">
+        {rolesUnicos.map((rol, index) => {
+          // Determinar nivel_acceso para cada rol
+          let nivelAcceso = usuario.nivel_acceso;
+          
+          // Si el rol es administrador y es el rol principal, usar nivel_acceso del usuario
+          if (rol === 'administrador' && rol === usuario.rol) {
+            nivelAcceso = usuario.nivel_acceso;
+          } 
+          // Si el rol es administrador pero es secundario, buscar en roles_secundarios
+          else if (rol === 'administrador' && usuario.roles_secundarios) {
+            const rolSecundario = usuario.roles_secundarios.find(ur => ur.rol === 'administrador');
+            if (rolSecundario) {
+              nivelAcceso = rolSecundario.nivel_acceso;
+            }
+          }
+          
+          return (
+            <span key={`${rol}-${index}`} className={getRoleBadgeClass(rol, nivelAcceso)}>
+              {getRoleLabel(rol, nivelAcceso)}
+              {index < rolesUnicos.length - 1 && <span className="role-separator"> / </span>}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   }, []);
@@ -306,8 +380,8 @@ export function UsuariosList() {
                 usuarios.map((usuario) => {
                 const usuarioDetallado = usuariosDetallados.get(usuario.id_usuario) || usuario;
                 return (
-                  <React.Fragment key={usuario.id_usuario}>
-                    <tr className="usuario-row">
+                  <>
+                    <tr key={usuario.id_usuario} className="usuario-row">
                       <td>{usuario.id_usuario}</td>
                       <td>
                         <div className="user-info">
@@ -315,7 +389,7 @@ export function UsuariosList() {
                           <span>{usuario.nombre}</span>
                         </div>
                       </td>
-                      <td>{getRoleLabel(usuario.rol, usuario.nivel_acceso)}</td>
+                      <td>{getRolesDisplay(usuario)}</td>
                       <td>
                         <span className={`status-badge ${usuario.activo ? 'active' : 'inactive'}`}>
                           {usuario.activo ? 'Activo' : 'Inactivo'}
@@ -391,7 +465,7 @@ export function UsuariosList() {
                               </div>
                               <div className="detail-item">
                                 <strong>Rol:</strong>
-                                <span>{getRoleLabel(usuarioDetallado.rol, usuarioDetallado.nivel_acceso)}</span>
+                                <span>{getRolesDisplay(usuarioDetallado)}</span>
                               </div>
                               <div className="detail-item">
                                 <strong>Estado:</strong>
@@ -458,7 +532,7 @@ export function UsuariosList() {
                         </td>
                       </tr>
                     )}
-                  </React.Fragment>
+                  </>
                 );
                 })
               )}

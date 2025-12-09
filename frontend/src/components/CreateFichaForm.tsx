@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ApiService } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { CreateConsultanteModal } from './CreateConsultanteModal';
+import { FaPlus } from 'react-icons/fa';
 import './CreateFichaForm.css';
 
 interface Consultante {
@@ -22,9 +24,11 @@ interface Docente {
 
 interface Props {
   onSuccess?: () => void;
+  onOpenCreateConsultanteModal?: () => void;
+  onConsultanteCreated?: (handleConsultanteCreated: (consultante: Consultante) => Promise<void>) => void;
 }
 
-export function CreateFichaForm({ onSuccess }: Props) {
+function CreateFichaFormComponent({ onSuccess, onOpenCreateConsultanteModal, onConsultanteCreated }: Props) {
   const [consultantes, setConsultantes] = useState<Consultante[]>([]);
   const [docentes, setDocentes] = useState<Docente[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,20 +46,23 @@ export function CreateFichaForm({ onSuccess }: Props) {
   });
 
   useEffect(() => {
+    const timestamp = new Date().toISOString();
+    console.log(`🔍 [${timestamp}] [CreateFichaForm] useEffect inicial - cargando consultantes y docentes`);
     loadConsultantes();
     loadDocentes();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar una vez al montar
 
-  const loadConsultantes = async () => {
+  const loadConsultantes = useCallback(async () => {
     try {
       const data = await ApiService.getConsultantes();
       setConsultantes(data);
     } catch (error: any) {
       showToast('Error al cargar consultantes: ' + error.message, 'error');
     }
-  };
+  }, [showToast]);
 
-  const loadDocentes = async () => {
+  const loadDocentes = useCallback(async () => {
     try {
       const allUsers = await ApiService.getUsuarios();
       const docentesList = allUsers.filter((u: any) => {
@@ -65,7 +72,40 @@ export function CreateFichaForm({ onSuccess }: Props) {
     } catch (error: any) {
       showToast('Error al cargar docentes: ' + error.message, 'error');
     }
-  };
+  }, [showToast]);
+
+
+  const handleConsultanteCreated = useCallback(async (consultante: Consultante) => {
+    const timestamp = new Date().toISOString();
+    console.log(`🔍 [${timestamp}] [CreateFichaForm] handleConsultanteCreated llamado`);
+    try {
+      // Recargar lista de consultantes
+      console.log(`🔍 [${timestamp}] [CreateFichaForm] Recargando consultantes...`);
+      await loadConsultantes();
+      
+      // Seleccionar el consultante recién creado
+      setFormData((prev) => ({ ...prev, id_consultante: consultante.id_consultante.toString() }));
+      console.log(`🔍 [${timestamp}] [CreateFichaForm] Consultante seleccionado:`, consultante.id_consultante);
+    } catch (error) {
+      console.error('Error al recargar consultantes:', error);
+      showToast('Error al recargar consultantes: ' + (error as Error).message, 'error');
+    }
+  }, [loadConsultantes, showToast]);
+
+  // Notificar al padre cuando el callback esté listo
+  // Usar useRef para evitar que se llame múltiples veces cuando el componente se desmonta y vuelve a montar
+  const onConsultanteCreatedRef = useRef(onConsultanteCreated);
+  useEffect(() => {
+    onConsultanteCreatedRef.current = onConsultanteCreated;
+  }, [onConsultanteCreated]);
+
+  useEffect(() => {
+    const timestamp = new Date().toISOString();
+    console.log(`🔍 [${timestamp}] [CreateFichaForm] Notificando onConsultanteCreated al padre`);
+    if (onConsultanteCreatedRef.current) {
+      onConsultanteCreatedRef.current(handleConsultanteCreated);
+    }
+  }, [handleConsultanteCreated]);
 
   const handleSubmit = async (e: React.FormEvent, estado: 'aprobado' | 'pendiente') => {
     e.preventDefault();
@@ -283,7 +323,11 @@ export function CreateFichaForm({ onSuccess }: Props) {
 
 
   return (
-    <div className="create-ficha-form">
+    <div 
+      className="create-ficha-form"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <div className="form-header">
         <h2>📋 Crear Nueva Ficha de Consulta</h2>
         <p className="form-subtitle">
@@ -291,9 +335,41 @@ export function CreateFichaForm({ onSuccess }: Props) {
         </p>
       </div>
 
-      <form onSubmit={(e) => e.preventDefault()} className="form-content">
+      <form 
+        onSubmit={(e) => e.preventDefault()} 
+        className="form-content"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="form-group">
-          <label htmlFor="id_consultante">Consultante *</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <label htmlFor="id_consultante">Consultante *</label>
+            <button
+              type="button"
+              onClick={(e) => {
+                const timestamp = new Date().toISOString();
+                e.preventDefault();
+                e.stopPropagation();
+                console.log(`🔍 [${timestamp}] [CreateFichaForm] Botón "Crear Consultante" clickeado`);
+                // Notificar al padre para abrir el modal
+                if (onOpenCreateConsultanteModal) {
+                  console.log(`🔍 [${timestamp}] [CreateFichaForm] Llamando onOpenCreateConsultanteModal`);
+                  onOpenCreateConsultanteModal();
+                }
+              }}
+              onMouseDown={(e) => {
+                const timestamp = new Date().toISOString();
+                e.preventDefault();
+                e.stopPropagation();
+                console.log(`🔍 [${timestamp}] [CreateFichaForm] Botón "Crear Consultante" onMouseDown`);
+              }}
+              className="btn-create-consultante"
+              disabled={loading}
+              title="Crear nuevo consultante"
+            >
+              <FaPlus /> Crear Consultante
+            </button>
+          </div>
           <select
             id="id_consultante"
             value={formData.id_consultante}
@@ -464,10 +540,20 @@ export function CreateFichaForm({ onSuccess }: Props) {
           </button>
         </div>
       </form>
+
+      {/* El modal de consultante ahora se renderiza en CreateFichaModal */}
     </div>
   );
 }
 
-
+// Usar React.memo para evitar desmontajes innecesarios
+export const CreateFichaForm = memo(CreateFichaFormComponent, (prevProps, nextProps) => {
+  // Solo re-renderizar si las props realmente cambiaron
+  return (
+    prevProps.onSuccess === nextProps.onSuccess &&
+    prevProps.onOpenCreateConsultanteModal === nextProps.onOpenCreateConsultanteModal &&
+    prevProps.onConsultanteCreated === nextProps.onConsultanteCreated
+  );
+});
 
 

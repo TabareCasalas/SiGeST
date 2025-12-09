@@ -43,7 +43,7 @@ export class EmailService {
 
       // Configuración del remitente: usar onboarding@resend.dev por defecto
       const fromEmail = 'onboarding@resend.dev';
-      const fromName = 'SiGeST Sistema';
+      const fromName = 'SGST Sistema';
 
       console.log(`📧 Intentando enviar correo a: ${correo}`);
       console.log(`📧 Desde: ${fromEmail}`);
@@ -57,7 +57,7 @@ export class EmailService {
       const { data, error } = await resend.emails.send({
         from: fromAddress,
         to: [correo],
-        subject: 'Bienvenido al Sistema SiGeST - Credenciales de Acceso',
+        subject: 'Bienvenido al Sistema SGST - Credenciales de Acceso',
         html: `
           <!DOCTYPE html>
           <html lang="es">
@@ -196,12 +196,12 @@ export class EmailService {
           <body>
             <div class="email-wrapper">
               <div class="header">
-                <h1>🔐 Bienvenido al Sistema SiGeST</h1>
+                <h1>🔐 Bienvenido al Sistema SGST</h1>
               </div>
               <div class="content">
                 <div class="greeting">
                   <p>Estimado/a <strong>${nombre}</strong>,</p>
-                  <p>Tu cuenta ha sido creada exitosamente en el <strong>Sistema de Gestión de Trámites (SiGeST)</strong>.</p>
+                  <p>Tu cuenta ha sido creada exitosamente en el <strong>Sistema de Gestión de Trámites (SGST)</strong>.</p>
                 </div>
                 
                 <div class="credentials-box">
@@ -232,7 +232,7 @@ export class EmailService {
                 <div class="instructions">
                   <h3>📝 Pasos para acceder al sistema:</h3>
                   <ol>
-                    <li>Ingresa a la plataforma SiGeST</li>
+                    <li>Ingresa a la plataforma SGST</li>
                     <li>Utiliza tu <strong>Cédula de Identidad (${ci})</strong> como usuario</li>
                     <li>Ingresa la <strong>contraseña temporal</strong> proporcionada arriba</li>
                     <li>El sistema te solicitará <strong>cambiar tu contraseña</strong> inmediatamente</li>
@@ -253,7 +253,7 @@ export class EmailService {
                 </p>
               </div>
               <div class="footer">
-                <p><strong>Sistema de Gestión de Trámites (SiGeST)</strong></p>
+                <p><strong>Sistema de Gestión de Trámites (SGST)</strong></p>
                 <p>Este es un correo automático generado por el sistema.</p>
                 <p style="margin-top: 10px; color: #94a3b8;">Por favor, no responda a este correo.</p>
               </div>
@@ -263,12 +263,12 @@ export class EmailService {
         `,
         text: `
 ═══════════════════════════════════════════════════════
-  BIENVENIDO AL SISTEMA SIGEST
+  BIENVENIDO AL SISTEMA SGST
 ═══════════════════════════════════════════════════════
 
 Estimado/a ${nombre},
 
-Tu cuenta ha sido creada exitosamente en el Sistema de Gestión de Trámites (SiGeST).
+Tu cuenta ha sido creada exitosamente en el Sistema de Gestión de Trámites (SGST).
 
 ═══════════════════════════════════════════════════════
   TUS CREDENCIALES DE ACCESO
@@ -291,7 +291,7 @@ No compartas esta contraseña con nadie.
   PASOS PARA ACCEDER AL SISTEMA
 ═══════════════════════════════════════════════════════
 
-1. Ingresa a la plataforma SiGeST
+1. Ingresa a la plataforma SGST
 2. Utiliza tu Cédula de Identidad (${ci}) como usuario
 3. Ingresa la contraseña temporal proporcionada arriba
 4. El sistema te solicitará cambiar tu contraseña inmediatamente
@@ -308,7 +308,7 @@ Si tienes alguna pregunta o necesitas asistencia, por favor
 contacta al administrador del sistema.
 
 ═══════════════════════════════════════════════════════
-Sistema de Gestión de Trámites (SiGeST)
+Sistema de Gestión de Trámites (SGST)
 Este es un correo automático generado por el sistema.
 Por favor, no responda a este correo.
 ═══════════════════════════════════════════════════════
