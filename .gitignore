@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Database exports
+database_exports/
+database_*.sql
+database_backup_*.sql
