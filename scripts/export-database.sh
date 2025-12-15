@@ -51,16 +51,35 @@ fi
 
 echo -e "${GREEN}[INFO]${NC} Usando contenedor: $CONTAINER_NAME"
 
+# Verificar qué usuario existe
+echo -e "${GREEN}[INFO]${NC} Verificando usuario de base de datos..."
+if ! PGPASSWORD=$DB_PASSWORD docker exec $CONTAINER_NAME psql -U $DB_USER -d $DB_NAME -c "SELECT 1;" > /dev/null 2>&1; then
+    echo -e "${YELLOW}[WARN]${NC} Usuario $DB_USER no existe, intentando con 'postgres'..."
+    DB_USER="postgres"
+    DB_PASSWORD=""  # postgres por defecto no tiene contraseña
+fi
+
 # Exportar la base de datos
-echo -e "${GREEN}[INFO]${NC} Ejecutando pg_dump..."
-PGPASSWORD=$DB_PASSWORD docker exec $CONTAINER_NAME \
-  pg_dump -U $DB_USER -d $DB_NAME \
-  --clean \
-  --if-exists \
-  --no-owner \
-  --no-acl \
-  --format=plain \
-  > "$EXPORT_DIR/$EXPORT_FILE"
+echo -e "${GREEN}[INFO]${NC} Ejecutando pg_dump con usuario: $DB_USER..."
+if [ -n "$DB_PASSWORD" ]; then
+    PGPASSWORD=$DB_PASSWORD docker exec $CONTAINER_NAME \
+      pg_dump -U $DB_USER -d $DB_NAME \
+      --clean \
+      --if-exists \
+      --no-owner \
+      --no-acl \
+      --format=plain \
+      > "$EXPORT_DIR/$EXPORT_FILE"
+else
+    docker exec $CONTAINER_NAME \
+      pg_dump -U $DB_USER -d $DB_NAME \
+      --clean \
+      --if-exists \
+      --no-owner \
+      --no-acl \
+      --format=plain \
+      > "$EXPORT_DIR/$EXPORT_FILE"
+fi
 
 if [ $? -eq 0 ]; then
     echo ""

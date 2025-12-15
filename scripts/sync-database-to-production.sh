@@ -92,3 +92,4 @@ echo -e "${GREEN}✅ Sincronización completada!${NC}"
 echo ""
 echo "La base de datos de producción ahora tiene los mismos datos que desarrollo."
 
+

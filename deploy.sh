@@ -211,3 +211,4 @@ echo "  3. Revisa el archivo .env y asegúrate de que todas las variables estén
 echo "  4. Revisa los logs si algo no funciona: docker logs <nombre_contenedor>"
 echo ""
 
+
