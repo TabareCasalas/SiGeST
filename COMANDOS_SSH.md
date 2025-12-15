@@ -1,76 +1,89 @@
 # Comandos SSH para Actualizar y Ejecutar Seed de Prueba
 
-## 🔍 Paso 1: Encontrar el directorio del proyecto
+## 🔍 Buscar el proyecto en lugares comunes
 
-Si no sabes dónde está el proyecto, ejecuta:
-
-```bash
-# Buscar el directorio SiGeST
-find /home -name "SiGeST" -type d 2>/dev/null
-
-# O buscar desde la raíz (puede tardar más)
-find / -name "SiGeST" -type d 2>/dev/null | head -5
-```
-
-## 📋 Comandos una vez encontrado el directorio
-
-### Si el proyecto está en `/home/tabare_casalas/SiGeST`:
+Ejecuta estos comandos para encontrar dónde está el proyecto:
 
 ```bash
-cd /home/tabare_casalas/SiGeST && git fetch origin && git pull origin main && cd backend && npm install && npm run seed:prueba
+# Buscar en todo el sistema (puede tardar un poco)
+find / -name "SiGeST" -type d 2>/dev/null | head -10
+
+# Buscar en lugares comunes
+find /opt /var/www /home /root -name "SiGeST" -type d 2>/dev/null
+
+# Buscar archivos característicos del proyecto
+find / -name "package.json" -path "*/SiGeST/*" 2>/dev/null | head -5
+find / -name "prisma" -type d -path "*/SiGeST/*" 2>/dev/null | head -5
 ```
 
-### Si el proyecto está en otro lugar:
+## 📋 Si el proyecto está en Docker
+
+Si el proyecto corre en Docker, puede estar en un contenedor:
+
+```bash
+# Ver contenedores activos
+docker ps
+
+# Ver todos los contenedores
+docker ps -a
+
+# Si hay un contenedor, entrar a él
+docker exec -it [nombre-contenedor] bash
+
+# Dentro del contenedor, buscar el proyecto
+find / -name "SiGeST" -type d 2>/dev/null
+```
+
+## 🚀 Si necesitas clonar el proyecto
+
+Si no encuentras el proyecto, puede que necesites clonarlo:
+
+```bash
+# Ir a un directorio apropiado
+cd /home/tabare_casalas
+
+# Clonar el repositorio (ajusta la URL)
+git clone [URL_DEL_REPOSITORIO] SiGeST
+
+# O si ya tienes el repositorio configurado
+git clone git@github.com:[usuario]/SiGeST.git
+# o
+git clone https://github.com/[usuario]/SiGeST.git
+```
+
+## 📋 Comandos una vez encontrado el proyecto
+
+Una vez que encuentres la ruta, ejecuta:
 
 ```bash
 # Reemplaza [RUTA] con la ruta encontrada
 cd [RUTA]/SiGeST && git fetch origin && git pull origin main && cd backend && npm install && npm run seed:prueba
 ```
 
-## 🚀 Comandos paso a paso (más seguro)
+## 🔧 Verificar dónde corre la aplicación
+
+Si la aplicación ya está corriendo, puedes encontrar dónde está:
 
 ```bash
-# 1. Ir al directorio del proyecto
-cd /home/tabare_casalas/SiGeST
-# (o la ruta que encuentres)
+# Ver procesos de Node
+ps aux | grep node
 
-# 2. Verificar que estás en el lugar correcto
-ls -la
-# Deberías ver: backend/, frontend/, package.json, etc.
+# Ver procesos relacionados con SiGeST
+ps aux | grep -i sigest
 
-# 3. Actualizar desde Git
-git fetch origin
-git pull origin main
-
-# 4. Ir al backend
-cd backend
-
-# 5. Instalar dependencias
-npm install
-
-# 6. Ejecutar el seed
-npm run seed:prueba
+# Ver puertos en uso
+netstat -tulpn | grep -E '3000|5000|8000'
+# o
+ss -tulpn | grep -E '3000|5000|8000'
 ```
 
-## 🔧 Si el proyecto no existe o necesitas clonarlo
-
-Si no encuentras el proyecto, puede que necesites clonarlo:
+## 📁 Lugares comunes donde puede estar
 
 ```bash
-cd /home/tabare_casalas
-git clone [URL_DEL_REPOSITORIO] SiGeST
-cd SiGeST/backend
-npm install
-npm run seed:prueba
-```
-
-## ⚠️ Verificar la rama correcta
-
-Antes de hacer pull, verifica qué rama estás usando:
-
-```bash
-cd /home/tabare_casalas/SiGeST
-git branch
-# Si muestra otra rama (no main), ajusta el comando:
-git pull origin [nombre-de-la-rama]
+# Verificar estos directorios comunes
+ls -la /opt/
+ls -la /var/www/
+ls -la /home/
+ls -la /root/
+ls -la /srv/
 ```
