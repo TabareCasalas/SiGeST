@@ -292,14 +292,21 @@ async function crearTramitesYHojasRuta(grupos: any, usuariosCreados: any) {
   console.log('📋 Creando trámites y hojas de ruta...\n');
 
   // Obtener consultantes
-  const consultantes = await prisma.consultante.findMany({
+  let consultantes = await prisma.consultante.findMany({
     include: {
       usuario: true,
     },
   });
 
+  // Si hay menos de 6 consultantes, reutilizar los existentes
   if (consultantes.length < 6) {
-    throw new Error('No hay suficientes consultantes');
+    console.log(`⚠️  Solo hay ${consultantes.length} consultantes, se reutilizarán para completar 6 trámites`);
+    // Duplicar la lista hasta tener al menos 6
+    while (consultantes.length < 6) {
+      consultantes = [...consultantes, ...consultantes].slice(0, 6);
+    }
+  } else {
+    consultantes = consultantes.slice(0, 6);
   }
 
   const tramitesCreados = [];
