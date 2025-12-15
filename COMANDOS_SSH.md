@@ -1,24 +1,8 @@
 # Comandos SSH para Actualizar y Ejecutar Seed de Prueba
 
-## 🔍 Buscar el proyecto en lugares comunes
+## 🔍 Verificar si está en Docker
 
-Ejecuta estos comandos para encontrar dónde está el proyecto:
-
-```bash
-# Buscar en todo el sistema (puede tardar un poco)
-find / -name "SiGeST" -type d 2>/dev/null | head -10
-
-# Buscar en lugares comunes
-find /opt /var/www /home /root -name "SiGeST" -type d 2>/dev/null
-
-# Buscar archivos característicos del proyecto
-find / -name "package.json" -path "*/SiGeST/*" 2>/dev/null | head -5
-find / -name "prisma" -type d -path "*/SiGeST/*" 2>/dev/null | head -5
-```
-
-## 📋 Si el proyecto está en Docker
-
-Si el proyecto corre en Docker, puede estar en un contenedor:
+Si el proyecto corre en Docker, necesitas ejecutar los comandos dentro del contenedor:
 
 ```bash
 # Ver contenedores activos
@@ -27,63 +11,56 @@ docker ps
 # Ver todos los contenedores
 docker ps -a
 
-# Si hay un contenedor, entrar a él
-docker exec -it [nombre-contenedor] bash
+# Entrar al contenedor del backend (ajusta el nombre)
+docker exec -it [nombre-contenedor-backend] bash
 
-# Dentro del contenedor, buscar el proyecto
-find / -name "SiGeST" -type d 2>/dev/null
+# Dentro del contenedor, ejecutar:
+cd /app/backend  # o la ruta donde esté el backend en el contenedor
+npm run seed:prueba
 ```
 
-## 🚀 Si necesitas clonar el proyecto
-
-Si no encuentras el proyecto, puede que necesites clonarlo:
+## 📦 Si no está en Docker, verificar Node.js
 
 ```bash
-# Ir a un directorio apropiado
-cd /home/tabare_casalas
+# Verificar si Node.js está instalado
+which node
+which npm
 
-# Clonar el repositorio (ajusta la URL)
-git clone [URL_DEL_REPOSITORIO] SiGeST
+# Ver versión
+node --version
+npm --version
 
-# O si ya tienes el repositorio configurado
-git clone git@github.com:[usuario]/SiGeST.git
+# Si no está instalado, verificar si hay nvm
+nvm --version
+
+# Si hay nvm, usar Node.js
+nvm use node
 # o
-git clone https://github.com/[usuario]/SiGeST.git
+nvm use 18  # o la versión que necesites
 ```
 
-## 📋 Comandos una vez encontrado el proyecto
-
-Una vez que encuentres la ruta, ejecuta:
+## 🐳 Si está en Docker Compose
 
 ```bash
-# Reemplaza [RUTA] con la ruta encontrada
-cd [RUTA]/SiGeST && git fetch origin && git pull origin main && cd backend && npm install && npm run seed:prueba
+# Ver servicios
+docker-compose ps
+
+# Ejecutar comando en el servicio del backend
+docker-compose exec backend npm run seed:prueba
+
+# O si el servicio tiene otro nombre
+docker-compose exec [nombre-servicio] npm run seed:prueba
 ```
 
-## 🔧 Verificar dónde corre la aplicación
-
-Si la aplicación ya está corriendo, puedes encontrar dónde está:
+## 🔧 Verificar estructura del proyecto
 
 ```bash
-# Ver procesos de Node
-ps aux | grep node
+cd /opt/sigest
+ls -la
 
-# Ver procesos relacionados con SiGeST
-ps aux | grep -i sigest
+# Ver si hay docker-compose.yml
+cat docker-compose.yml
 
-# Ver puertos en uso
-netstat -tulpn | grep -E '3000|5000|8000'
-# o
-ss -tulpn | grep -E '3000|5000|8000'
-```
-
-## 📁 Lugares comunes donde puede estar
-
-```bash
-# Verificar estos directorios comunes
-ls -la /opt/
-ls -la /var/www/
-ls -la /home/
-ls -la /root/
-ls -la /srv/
+# Ver si hay Dockerfile
+ls -la | grep -i docker
 ```
